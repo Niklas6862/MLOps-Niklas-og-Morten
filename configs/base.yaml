@@ -1,0 +1,7 @@
+project:
+  name: "image-classifier-finetune"
+  seed: 42
+  output_dir: "models/artifacts"
+  mlflow_tracking_uri: "mlruns"
+  experiment_name: "vit-beans-classifier"
+  log_level: "INFO"

@@ -1,0 +1,6 @@
+model:
+  # Vision Transformer — lightweight, well-supported on HuggingFace
+  name: "google/vit-base-patch16-224"
+  num_labels: 3
+  ignore_mismatched_sizes: true
+  cache_dir: "models/hf_cache"

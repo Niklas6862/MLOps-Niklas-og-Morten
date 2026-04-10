@@ -1,0 +1,12 @@
+dataset:
+  # HuggingFace dataset name - beans: 3-class plant disease (angular_leaf_spot, bean_rust, healthy)
+  name: "beans"
+  split_train: "train"
+  split_val: "validation"
+  split_test: "test"
+  image_column: "image"
+  label_column: "labels"
+  num_workers: 2
+  cache_dir: "data/raw"
+  # Image size is determined by the processor; override if needed
+  image_size: 224
