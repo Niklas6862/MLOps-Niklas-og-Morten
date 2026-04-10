@@ -214,3 +214,16 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ML artefacts — large files tracked separately (DVC) or ignored entirely
+models/artifacts/
+models/hf_cache/
+data/raw/
+data/processed/
+mlruns/
+
+# Keep placeholder files
+!models/artifacts/.gitkeep
+!models/hf_cache/.gitkeep
+!data/raw/.gitkeep
+!data/processed/.gitkeep

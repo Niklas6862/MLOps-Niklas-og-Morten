@@ -1,0 +1,44 @@
+version: "3.9"
+
+# Provides two named services sharing the same image:
+#   - trainer:  runs the fine-tuning pipeline
+#   - mlflow:   serves the MLflow tracking UI on port 5000
+#
+# Usage:
+#   docker compose up trainer        # run training
+#   docker compose up mlflow         # view experiment dashboard
+#   docker compose run --rm trainer  # one-shot training run
+
+services:
+  trainer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: image-classifier:latest
+    command: python train.py
+    volumes:
+      # Mount local directories so artifacts and cache persist outside the container
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./mlruns:/app/mlruns
+      - ./configs:/app/configs
+    environment:
+      - PYTHONUNBUFFERED=1
+      - TRANSFORMERS_CACHE=/app/models/hf_cache
+    # Uncomment if you have a GPU:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:latest
+    command: mlflow ui --host 0.0.0.0 --port 5000 --backend-store-uri /mlruns
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlruns:/mlruns

@@ -1,0 +1,51 @@
+# Version control
+.git/
+.gitignore
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Linting / tooling caches
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# Generated / runtime artifacts (don't bake into image)
+mlruns/
+models/artifacts/
+models/hf_cache/
+data/raw/
+data/processed/
+
+# Notebooks (not needed at runtime)
+notebooks/
+
+# Tests (not needed at runtime)
+tests/
+
+# CI/CD config (not needed at runtime)
+.github/
+Jenkinsfile
+.pre-commit-config.yaml
+
+# Documentation
+README.md
+
+# IDE
+.vscode/
+.idea/
