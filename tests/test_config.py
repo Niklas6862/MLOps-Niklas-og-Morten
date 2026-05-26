@@ -1,11 +1,11 @@
 """Tests for src/config.py — config loading and merging."""
+
 from __future__ import annotations
 
 from pathlib import Path
 
 import pytest
 import yaml
-
 from src.config import deep_merge, load_config, load_yaml
 
 
@@ -39,10 +39,10 @@ def test_deep_merge_nested() -> None:
     base = {"outer": {"x": 1, "y": 2}, "top": "keep"}
     override = {"outer": {"y": 99, "z": 0}}
     result = deep_merge(base, override)
-    assert result["outer"]["x"] == 1      # untouched
-    assert result["outer"]["y"] == 99     # overridden
-    assert result["outer"]["z"] == 0      # added
-    assert result["top"] == "keep"        # untouched top-level key
+    assert result["outer"]["x"] == 1  # untouched
+    assert result["outer"]["y"] == 99  # overridden
+    assert result["outer"]["z"] == 0  # added
+    assert result["top"] == "keep"  # untouched top-level key
 
 
 def test_load_config_single(tmp_path: Path) -> None:
@@ -62,8 +62,8 @@ def test_load_config_merge_multiple(tmp_path: Path) -> None:
     p2.write_text(yaml.dump(cfg2))
 
     merged = load_config(p1, p2)
-    assert merged["project"]["name"] == "base"   # from cfg1
-    assert merged["project"]["seed"] == 99       # overridden by cfg2
+    assert merged["project"]["name"] == "base"  # from cfg1
+    assert merged["project"]["seed"] == 99  # overridden by cfg2
     assert merged["project"]["new_key"] == "hello"  # added by cfg2
 
 

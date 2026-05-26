@@ -8,19 +8,19 @@ Usage::
 The script loads all YAML configs, sets up MLflow experiment tracking, preprocesses
 the dataset, and launches a HuggingFace Trainer run.
 """
+
 from __future__ import annotations
 
 import argparse
 import logging
 
 import mlflow
-from transformers import Trainer
-
 from src.config import load_config
 from src.data import collate_fn, load_image_dataset, preprocess_dataset
 from src.model import load_model_and_processor
 from src.train import compute_metrics, get_training_args
 from src.utils import ensure_dir, get_label_mappings, set_seed, setup_logging
+from transformers import Trainer
 
 logger = logging.getLogger(__name__)
 
