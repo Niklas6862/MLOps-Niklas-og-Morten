@@ -1,6 +1,6 @@
 dataset:
   # HuggingFace dataset name - beans: 3-class plant disease (angular_leaf_spot, bean_rust, healthy)
-  name: "beans"
+  name: "AI-Lab-Makerere/beans"
   split_train: "train"
   split_val: "validation"
   split_test: "test"
