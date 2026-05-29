@@ -22,6 +22,8 @@ import os
 from pathlib import Path
 
 import mlflow
+import mlflow.transformers
+import yaml
 from src.config import load_config
 from src.data import collate_fn, load_image_dataset, preprocess_dataset
 from src.model import load_model_and_processor
