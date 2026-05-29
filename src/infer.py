@@ -54,5 +54,5 @@ def predict_image(
             "label": model.config.id2label[int(idx)],
             "score": round(float(prob), 4),
         }
-        for prob, idx in zip(top_probs, top_ids)
+        for prob, idx in zip(top_probs, top_ids, strict=False)
     ]

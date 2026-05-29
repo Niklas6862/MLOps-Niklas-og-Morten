@@ -5,7 +5,6 @@ from pathlib import Path
 
 import pytest
 import yaml
-
 from src.config import deep_merge, load_config, load_yaml
 
 

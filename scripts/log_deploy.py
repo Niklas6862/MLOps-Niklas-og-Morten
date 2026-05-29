@@ -17,7 +17,6 @@ from pathlib import Path
 
 import mlflow
 import mlflow.tracking
-
 from src.config import load_config
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")

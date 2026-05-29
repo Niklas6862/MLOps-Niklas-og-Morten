@@ -23,13 +23,12 @@ from pathlib import Path
 import mlflow
 import mlflow.transformers
 import yaml
-from transformers import Trainer
-
 from src.config import load_config
 from src.data import collate_fn, load_image_dataset, preprocess_dataset
 from src.model import load_model_and_processor
 from src.train import compute_metrics, get_training_args
 from src.utils import ensure_dir, get_label_mappings, set_seed, setup_logging
+from transformers import Trainer
 
 logger = logging.getLogger(__name__)
 

@@ -22,14 +22,17 @@ from pathlib import Path
 
 import mlflow
 import numpy as np
-import torch
-from transformers import AutoImageProcessor, AutoModelForImageClassification, Trainer, TrainingArguments
-
 from src.config import load_config
 from src.data import collate_fn, load_image_dataset, preprocess_dataset
 from src.eval import compute_detailed_metrics, save_results
 from src.train import compute_metrics
-from src.utils import get_label_mappings, set_seed, setup_logging
+from src.utils import set_seed, setup_logging
+from transformers import (
+    AutoImageProcessor,
+    AutoModelForImageClassification,
+    Trainer,
+    TrainingArguments,
+)
 
 logger = logging.getLogger(__name__)
 

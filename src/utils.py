@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 import random
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import numpy as np
 import torch
@@ -41,7 +41,7 @@ def ensure_dir(path: str | Path) -> Path:
     return p
 
 
-def get_label_mappings(dataset: "DatasetDict") -> tuple[dict[str, int], dict[int, str]]:
+def get_label_mappings(dataset: DatasetDict) -> tuple[dict[str, int], dict[int, str]]:
     """Extract label2id / id2label from a HuggingFace DatasetDict.
 
     Assumes the label column uses a ClassLabel feature.
@@ -51,7 +51,7 @@ def get_label_mappings(dataset: "DatasetDict") -> tuple[dict[str, int], dict[int
     for col in ("labels", "label"):
         if col in features and hasattr(features[col], "names"):
             names: list[str] = features[col].names
-            id2label = {i: name for i, name in enumerate(names)}
+            id2label = dict(enumerate(names))
             label2id = {name: i for i, name in id2label.items()}
             return label2id, id2label
     raise ValueError(
