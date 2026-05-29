@@ -1,0 +1,6 @@
+[core]
+    remote = minio
+['remote "minio"']
+    url = s3://mlops-niklas-og-morten
+    endpointurl = http://172.24.198.42:9000
+    access_key_id = daki

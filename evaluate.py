@@ -12,20 +12,28 @@ Note: this file is named ``evaluate.py`` intentionally as a CLI entry point.
 All imports from the ``src`` package use ``src.eval`` to avoid shadowing any
 installed package named ``evaluate``.
 """
+
 from __future__ import annotations
 
 import argparse
 import logging
+import os
+import sys
+from pathlib import Path
 
+import mlflow
 import numpy as np
-import torch
-from transformers import AutoImageProcessor, AutoModelForImageClassification, Trainer, TrainingArguments
-
 from src.config import load_config
 from src.data import collate_fn, load_image_dataset, preprocess_dataset
 from src.eval import compute_detailed_metrics, save_results
 from src.train import compute_metrics
-from src.utils import get_label_mappings, set_seed, setup_logging
+from src.utils import set_seed, setup_logging
+from transformers import (
+    AutoImageProcessor,
+    AutoModelForImageClassification,
+    Trainer,
+    TrainingArguments,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +54,13 @@ def parse_args() -> argparse.Namespace:
         "--output",
         default="models/artifacts/eval_results.json",
         help="JSON file for results",
+    )
+    parser.add_argument(
+        "--min-accuracy",
+        type=float,
+        default=0.0,
+        metavar="THRESHOLD",
+        help="Minimum accuracy; pipeline fails with exit code 1 if below threshold (default: 0.0, disabled)",
     )
     return parser.parse_args()
 
@@ -104,7 +119,35 @@ def main() -> None:
 
     detailed = compute_detailed_metrics(logits, np.array(labels), id2label)
     save_results(detailed, args.output)
-    logger.info("Evaluation complete.")
+
+    # Log eval metrics back onto the training MLflow run (if run_id.txt exists)
+    tracking_uri = os.getenv("MLFLOW_TRACKING_URI", base_cfg.get("mlflow_tracking_uri", "mlruns"))
+    mlflow.set_tracking_uri(tracking_uri)
+    run_id_file = Path(args.model_dir) / "run_id.txt"
+    if run_id_file.exists():
+        run_id = run_id_file.read_text().strip()
+        with mlflow.start_run(run_id=run_id):
+            flat: dict[str, float] = {f"eval_{args.split}_accuracy": detailed["accuracy"]}
+            for cls, cls_m in detailed.get("per_class", {}).items():
+                for metric, val in cls_m.items():
+                    if isinstance(val, (int, float)):
+                        flat[f"eval_{args.split}_{cls}_{metric}"] = float(val)
+            mlflow.log_metrics(flat)
+        logger.info("Eval metrics logged to MLflow run %s.", run_id)
+
+    # Enforce performance threshold — non-zero exit causes Jenkins to fail the stage
+    accuracy: float = detailed["accuracy"]
+    if accuracy < args.min_accuracy:
+        logger.error(
+            "Accuracy %.4f is below the required threshold %.4f — failing the pipeline.",
+            accuracy,
+            args.min_accuracy,
+        )
+        sys.exit(1)
+
+    logger.info(
+        "Accuracy %.4f meets threshold %.4f. Evaluation complete.", accuracy, args.min_accuracy
+    )
 
 
 if __name__ == "__main__":

@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, dev]
   pull_request:
-    branches: [main]
+    branches: [main, dev]
 
 jobs:
   # ── Lint ────────────────────────────────────────────────────────────────────
@@ -23,7 +23,7 @@ jobs:
         run: uv python install 3.12
 
       - name: Install Ruff
-        run: uv pip install --system "ruff>=0.4.0"
+        run: uv tool install ruff
 
       - name: Ruff lint
         run: ruff check src/ tests/ train.py evaluate.py inference.py
@@ -47,10 +47,10 @@ jobs:
         run: uv python install 3.12
 
       - name: Install project + dev dependencies
-        run: uv pip install --system -e ".[dev]"
+        run: uv sync --extra dev
 
       - name: Run tests
-        run: pytest tests/ -v --tb=short --cov=src --cov-report=term-missing
+        run: uv run pytest tests/ -v --tb=short --cov=src --cov-report=term-missing
 
   # ── Structure validation ────────────────────────────────────────────────────
   validate-structure:
@@ -58,6 +58,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Set up Python 3.12
+        run: uv python install 3.12
 
       - name: Check required files
         run: |
@@ -74,7 +82,8 @@ jobs:
 
       - name: Validate YAML configs
         run: |
-          python -c "
+          uv sync
+          uv run python -c "
           import yaml, sys
           for f in ['configs/base.yaml','configs/data.yaml','configs/model.yaml','configs/training.yaml']:
               with open(f) as fh:

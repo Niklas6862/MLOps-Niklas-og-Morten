@@ -8,6 +8,7 @@ Usage::
 Loads a fine-tuned model from disk, runs it on a single image, and prints
 top-k predictions as JSON.
 """
+
 from __future__ import annotations
 
 import argparse

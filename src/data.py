@@ -1,11 +1,13 @@
 """Dataset loading and image preprocessing for HuggingFace image classification."""
+
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 import torch
-import torchvision.transforms as T
+import torchvision.transforms as transforms
 from datasets import DatasetDict, load_dataset
 from transformers import AutoImageProcessor
 
@@ -28,20 +30,20 @@ def _build_transform(processor: AutoImageProcessor, is_train: bool) -> Callable:
     std = processor.image_std
 
     if is_train:
-        return T.Compose(
+        return transforms.Compose(
             [
-                T.RandomResizedCrop(h),
-                T.RandomHorizontalFlip(),
-                T.ToTensor(),
-                T.Normalize(mean=mean, std=std),
+                transforms.RandomResizedCrop(h),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=mean, std=std),
             ]
         )
-    return T.Compose(
+    return transforms.Compose(
         [
-            T.Resize(h),
-            T.CenterCrop(h),
-            T.ToTensor(),
-            T.Normalize(mean=mean, std=std),
+            transforms.Resize(h),
+            transforms.CenterCrop(h),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=mean, std=std),
         ]
     )
 
@@ -65,9 +67,7 @@ def preprocess_dataset(
 
     def _apply(tf: Callable) -> Callable:
         def transform_fn(batch: dict) -> dict:
-            batch["pixel_values"] = [
-                tf(img.convert("RGB")) for img in batch[image_col]
-            ]
+            batch["pixel_values"] = [tf(img.convert("RGB")) for img in batch[image_col]]
             return batch
 
         return transform_fn

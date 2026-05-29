@@ -1,10 +1,10 @@
 """Training argument builder and metric computation."""
+
 from __future__ import annotations
 
 from typing import Any
 
 import numpy as np
-import torch
 from transformers import TrainingArguments
 
 

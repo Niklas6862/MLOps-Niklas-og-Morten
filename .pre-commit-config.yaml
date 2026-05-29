@@ -20,3 +20,6 @@ repos:
         args: ["--maxkb=500"]
       - id: check-merge-conflict
       - id: debug-statements
+      - id: detect-private-key
+      - id: detect-aws-credentials
+        args: ["--allow-missing-credentials"]
