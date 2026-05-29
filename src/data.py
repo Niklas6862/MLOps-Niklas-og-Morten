@@ -1,4 +1,5 @@
 """Dataset loading and image preprocessing for HuggingFace image classification."""
+
 from __future__ import annotations
 
 import logging
@@ -66,9 +67,7 @@ def preprocess_dataset(
 
     def _apply(tf: Callable) -> Callable:
         def transform_fn(batch: dict) -> dict:
-            batch["pixel_values"] = [
-                tf(img.convert("RGB")) for img in batch[image_col]
-            ]
+            batch["pixel_values"] = [tf(img.convert("RGB")) for img in batch[image_col]]
             return batch
 
         return transform_fn

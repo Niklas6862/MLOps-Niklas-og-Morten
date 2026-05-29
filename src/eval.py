@@ -1,4 +1,5 @@
 """Evaluation helpers: per-class metrics and results serialisation."""
+
 from __future__ import annotations
 
 import json
@@ -32,11 +33,7 @@ def compute_detailed_metrics(
         fn = int(((predictions != cls_id) & (labels == cls_id)).sum())
         precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
         recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-        f1 = (
-            2 * precision * recall / (precision + recall)
-            if (precision + recall) > 0
-            else 0.0
-        )
+        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
         per_class[cls_name] = {
             "precision": round(precision, 4),
             "recall": round(recall, 4),

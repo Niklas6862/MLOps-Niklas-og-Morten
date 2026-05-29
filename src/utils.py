@@ -1,4 +1,5 @@
 """Shared utilities: seeding, logging, path helpers, label mappings."""
+
 from __future__ import annotations
 
 import logging

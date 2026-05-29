@@ -1,4 +1,5 @@
 """Core inference logic (reusable from scripts or notebooks)."""
+
 from __future__ import annotations
 
 import logging

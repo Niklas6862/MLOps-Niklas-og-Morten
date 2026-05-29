@@ -13,6 +13,7 @@ the dataset, and launches a HuggingFace Trainer run.  After training it logs:
 - Model card YAML summarising provenance and train metrics
 - ``models/artifacts/run_id.txt`` so downstream pipeline stages can resume the run
 """
+
 from __future__ import annotations
 
 import argparse
@@ -21,8 +22,6 @@ import os
 from pathlib import Path
 
 import mlflow
-import mlflow.transformers
-import yaml
 from src.config import load_config
 from src.data import collate_fn, load_image_dataset, preprocess_dataset
 from src.model import load_model_and_processor
@@ -94,9 +93,7 @@ def main() -> None:
     ensure_dir(model_cfg.get("cache_dir", "models/hf_cache"))
 
     # Respect MLFLOW_TRACKING_URI env var so Jenkins can point at the cluster server
-    tracking_uri = os.getenv(
-        "MLFLOW_TRACKING_URI", base_cfg.get("mlflow_tracking_uri", "mlruns")
-    )
+    tracking_uri = os.getenv("MLFLOW_TRACKING_URI", base_cfg.get("mlflow_tracking_uri", "mlruns"))
     mlflow.set_tracking_uri(tracking_uri)
     mlflow.set_experiment(base_cfg.get("experiment_name", "image-classifier"))
 

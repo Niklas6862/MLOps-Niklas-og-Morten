@@ -12,6 +12,7 @@ Note: this file is named ``evaluate.py`` intentionally as a CLI entry point.
 All imports from the ``src`` package use ``src.eval`` to avoid shadowing any
 installed package named ``evaluate``.
 """
+
 from __future__ import annotations
 
 import argparse

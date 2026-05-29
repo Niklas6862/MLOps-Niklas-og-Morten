@@ -1,4 +1,5 @@
 """Tests for data utilities: collate_fn, transforms, and shared utils."""
+
 from __future__ import annotations
 
 import torch
