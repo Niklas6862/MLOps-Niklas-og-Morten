@@ -121,9 +121,7 @@ def main() -> None:
     save_results(detailed, args.output)
 
     # Log eval metrics back onto the training MLflow run (if run_id.txt exists)
-    tracking_uri = os.getenv(
-        "MLFLOW_TRACKING_URI", base_cfg.get("mlflow_tracking_uri", "mlruns")
-    )
+    tracking_uri = os.getenv("MLFLOW_TRACKING_URI", base_cfg.get("mlflow_tracking_uri", "mlruns"))
     mlflow.set_tracking_uri(tracking_uri)
     run_id_file = Path(args.model_dir) / "run_id.txt"
     if run_id_file.exists():
