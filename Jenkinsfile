@@ -25,7 +25,6 @@ pipeline {
     agent any
 
     environment {
-        UV_SYSTEM_PYTHON   = "1"
         PYTHONUNBUFFERED   = "1"
         IMAGE_NAME         = "image-classifier"
         IMAGE_TAG          = "${env.GIT_COMMIT?.take(8) ?: 'latest'}"
@@ -34,6 +33,7 @@ pipeline {
         REGISTRY           = "${env.DOCKER_REGISTRY ?: '172.24.198.42:5000'}"
         MLFLOW_TRACKING_URI = "${env.MLFLOW_URI ?: 'http://172.24.198.42:5050'}"
         MIN_ACCURACY       = "0.80"
+        PATH               = "${WORKSPACE}/.venv/bin:${env.PATH}"
     }
 
     stages {
@@ -50,7 +50,8 @@ pipeline {
             steps {
                 sh '''
                     pip install uv --quiet --upgrade
-                    uv pip install --system -e ".[dev]"
+                    uv venv .venv
+                    uv pip install -e ".[dev]"
                 '''
             }
         }
