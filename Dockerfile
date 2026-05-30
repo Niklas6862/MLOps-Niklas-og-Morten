@@ -5,7 +5,7 @@
 #   All packages are installed into a virtual env that is copied to the runtime
 #   stage, keeping the final image lean.
 # ─────────────────────────────────────────────────────────────────────────────
-FROM ghcr.io/astral-sh/uv:python3.12-slim AS builder
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder
 
 WORKDIR /app
 
