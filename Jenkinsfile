@@ -24,6 +24,14 @@
 pipeline {
     agent any
 
+    parameters {
+        string(
+            name: 'TRAIN_N_GPUS',
+            defaultValue: '1',
+            description: 'Number of GPUs for training. Set > 1 to use DDP (torchrun). Requires nvidia-container-toolkit on the agent.'
+        )
+    }
+
     environment {
         PYTHONUNBUFFERED   = "1"
         IMAGE_NAME         = "image-classifier"
@@ -33,9 +41,7 @@ pipeline {
         REGISTRY           = "${env.DOCKER_REGISTRY ?: '172.24.198.42:5000'}"
         MLFLOW_TRACKING_URI = "${env.MLFLOW_URI ?: 'http://172.24.198.42:5050'}"
         MIN_ACCURACY       = "0.80"
-        // Set TRAIN_N_GPUS > 1 in Jenkins global config to enable multi-GPU DDP training.
-        // Requires the Jenkins agent to have an NVIDIA runtime and nvidia-container-toolkit.
-        TRAIN_N_GPUS       = "${env.TRAIN_N_GPUS ?: '1'}"
+        TRAIN_N_GPUS       = "${params.TRAIN_N_GPUS ?: '1'}"
         PATH               = "${WORKSPACE}/.venv/bin:${env.PATH}"
     }
 
