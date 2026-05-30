@@ -51,9 +51,5 @@ COPY train.py evaluate.py inference.py ./
 # Create runtime directories
 RUN mkdir -p data/raw data/processed models/artifacts models/hf_cache mlruns
 
-# Non-root user for security
-RUN useradd --create-home appuser && chown -R appuser /app
-USER appuser
-
 # Default command: run training
 CMD ["python", "train.py"]
