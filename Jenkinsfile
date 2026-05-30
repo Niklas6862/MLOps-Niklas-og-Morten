@@ -49,7 +49,8 @@ pipeline {
         stage('Setup') {
             steps {
                 sh '''
-                    pip install uv --quiet --upgrade
+                    curl -LsSf https://astral.sh/uv/install.sh | sh
+                    export PATH="$HOME/.local/bin:$PATH"
                     uv venv .venv
                     uv pip install -e ".[dev]"
                 '''
