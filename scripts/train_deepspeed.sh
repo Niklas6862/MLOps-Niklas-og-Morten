@@ -1,12 +1,4 @@
 #!/usr/bin/env bash
-# Launch DeepSpeed ZeRO training via HuggingFace Trainer.
-#
-# Usage:
-#   bash scripts/train_deepspeed.sh              # ZeRO Stage 2 (default)
-#   bash scripts/train_deepspeed.sh zero3        # ZeRO Stage 3 + CPU offload
-#
-# The HuggingFace Trainer handles deepspeed launcher internals automatically
-# when DEEPSPEED_CONFIG is set in training config.  Pass --num_gpus to limit GPU count.
 set -euo pipefail
 
 STAGE=${1:-zero2}

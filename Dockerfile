@@ -15,16 +15,16 @@ COPY pyproject.toml ./
 # Install all project dependencies (no dev extras) into a local .venv
 RUN uv venv .venv && \
     uv pip install --python .venv/bin/python \
-        torch \
-        torchvision \
-        transformers \
-        datasets \
-        accelerate \
-        mlflow \
-        pyyaml \
-        pillow \
-        numpy \
-        scikit-learn
+    torch \
+    torchvision \
+    transformers \
+    datasets \
+    accelerate \
+    mlflow \
+    pyyaml \
+    pillow \
+    numpy \
+    scikit-learn
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage 2 – runtime image

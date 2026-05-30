@@ -1,13 +1,3 @@
-"""Register the latest trained model to the MLflow Model Registry.
-
-Reads the run ID written by train.py from ``models/artifacts/run_id.txt``,
-registers the logged ``model`` artifact, and transitions it to *Staging*.
-
-Run from project root::
-
-    python scripts/register_model.py
-"""
-
 from __future__ import annotations
 
 import logging

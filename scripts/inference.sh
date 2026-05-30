@@ -1,10 +1,4 @@
 #!/usr/bin/env bash
-# scripts/inference.sh — run single-image inference.
-#
-# Usage:
-#   bash scripts/inference.sh path/to/image.jpg
-#   IMAGE_PATH=data/sample.jpg MODEL_DIR=models/artifacts bash scripts/inference.sh
-
 set -euo pipefail
 
 IMAGE_PATH="${1:-${IMAGE_PATH:-}}"
@@ -16,5 +10,4 @@ if [ -z "$IMAGE_PATH" ]; then
     exit 1
 fi
 
-echo "==> Running inference on '$IMAGE_PATH' …"
 python inference.py "$IMAGE_PATH" --model-dir "$MODEL_DIR" --top-k "$TOP_K"

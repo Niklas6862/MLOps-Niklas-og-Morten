@@ -1,6 +1,6 @@
 """DDP + AMP training entry point — launch with torchrun.
 
-    torchrun --standalone --nproc_per_node=<N> train_ddp.py
+torchrun --standalone --nproc_per_node=<N> train_ddp.py
 """
 
 from __future__ import annotations
@@ -15,15 +15,14 @@ import mlflow.transformers
 import torch
 import torch.distributed as dist
 import yaml
-from torch.nn.parallel import DistributedDataParallel as DDP
-from torch.utils.data import DataLoader
-from torch.utils.data.distributed import DistributedSampler
-from transformers import get_linear_schedule_with_warmup
-
 from src.config import load_config
 from src.data import collate_fn, load_image_dataset, preprocess_dataset
 from src.model import load_model_and_processor
 from src.utils import ensure_dir, get_label_mappings, set_seed, setup_logging
+from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.utils.data import DataLoader
+from torch.utils.data.distributed import DistributedSampler
+from transformers import get_linear_schedule_with_warmup
 
 logger = logging.getLogger(__name__)
 
@@ -36,9 +35,7 @@ DEFAULT_CONFIGS = [
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="DDP + AMP fine-tuning of a ViT image classifier"
-    )
+    parser = argparse.ArgumentParser(description="DDP + AMP fine-tuning of a ViT image classifier")
     parser.add_argument(
         "--config",
         nargs="+",
