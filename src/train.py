@@ -5,12 +5,17 @@ from __future__ import annotations
 from typing import Any
 
 import numpy as np
+import torch
 from transformers import TrainingArguments
 
 
 def get_training_args(training_cfg: dict[str, Any]) -> TrainingArguments:
     """Convert the training YAML section into a HuggingFace TrainingArguments object."""
-    return TrainingArguments(
+    # Auto-enable fp16 on CUDA hardware unless explicitly overridden in config
+    fp16_default = torch.cuda.is_available()
+    fp16 = training_cfg.get("fp16", fp16_default)
+
+    kwargs: dict[str, Any] = dict(
         output_dir=training_cfg["output_dir"],
         num_train_epochs=training_cfg.get("num_epochs", 3),
         per_device_train_batch_size=training_cfg.get("per_device_train_batch_size", 16),
@@ -24,13 +29,19 @@ def get_training_args(training_cfg: dict[str, Any]) -> TrainingArguments:
         metric_for_best_model=training_cfg.get("metric_for_best_model", "accuracy"),
         greater_is_better=training_cfg.get("greater_is_better", True),
         logging_steps=training_cfg.get("logging_steps", 10),
-        fp16=training_cfg.get("fp16", False),
+        fp16=fp16,
         dataloader_num_workers=training_cfg.get("dataloader_num_workers", 2),
         report_to=training_cfg.get("report_to", "mlflow"),
         save_total_limit=training_cfg.get("save_total_limit", 2),
         push_to_hub=training_cfg.get("push_to_hub", False),
         remove_unused_columns=False,
     )
+
+    # DeepSpeed integration — pass config path when present in training config
+    if "deepspeed" in training_cfg:
+        kwargs["deepspeed"] = training_cfg["deepspeed"]
+
+    return TrainingArguments(**kwargs)
 
 
 def compute_metrics(eval_pred: tuple) -> dict[str, float]:
