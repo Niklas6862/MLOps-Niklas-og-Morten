@@ -137,7 +137,7 @@ for f in ['configs/base.yaml','configs/data.yaml','configs/model.yaml','configs/
                     TRAIN_CMD=\$([ "${TRAIN_N_GPUS}" -gt 1 ] \
                         && echo "torchrun --standalone --nproc_per_node=${TRAIN_N_GPUS} train_ddp.py" \
                         || echo "python train.py")
-                    docker run --rm \${GPU_FLAG} \\
+                    docker run --rm \${GPU_FLAG} --shm-size=2g \\
                         -v \${WORKSPACE}/models:/app/models \\
                         -v \${WORKSPACE}/data:/app/data \\
                         -e MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI} \\
