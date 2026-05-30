@@ -33,6 +33,9 @@ pipeline {
         REGISTRY           = "${env.DOCKER_REGISTRY ?: '172.24.198.42:5000'}"
         MLFLOW_TRACKING_URI = "${env.MLFLOW_URI ?: 'http://172.24.198.42:5050'}"
         MIN_ACCURACY       = "0.80"
+        // Set TRAIN_N_GPUS > 1 in Jenkins global config to enable multi-GPU DDP training.
+        // Requires the Jenkins agent to have an NVIDIA runtime and nvidia-container-toolkit.
+        TRAIN_N_GPUS       = "${env.TRAIN_N_GPUS ?: '1'}"
         PATH               = "${WORKSPACE}/.venv/bin:${env.PATH}"
     }
 
@@ -60,8 +63,8 @@ pipeline {
         // ── 3. Lint ─────────────────────────────────────────────────────────────
         stage('Lint') {
             steps {
-                sh 'ruff check src/ tests/ train.py evaluate.py inference.py scripts/'
-                sh 'ruff format --check src/ tests/ train.py evaluate.py inference.py scripts/'
+                sh 'ruff check src/ tests/ train.py train_ddp.py evaluate.py inference.py scripts/'
+                sh 'ruff format --check src/ tests/ train.py train_ddp.py evaluate.py inference.py scripts/'
             }
         }
 
@@ -73,7 +76,7 @@ pipeline {
             post {
                 always {
                     junit 'test-results.xml'
-                    publishCoverage adapters: [coberturaAdapter('coverage.xml')]
+                    archiveArtifacts artifacts: 'coverage.xml', allowEmptyArchive: true
                 }
             }
         }
@@ -123,13 +126,18 @@ for f in ['configs/base.yaml','configs/data.yaml','configs/model.yaml','configs/
 
         // ── 8. Train ─────────────────────────────────────────────────────────────
         // Run training inside the exact image that was just pushed.
-        // Lineage env vars are injected so train.py can tag the MLflow run.
-        // models/ is mounted so the trained model and run_id.txt persist on the host.
+        // When TRAIN_N_GPUS > 1 the container launches train_ddp.py via torchrun
+        // (DDP + AMP); otherwise falls back to the single-GPU train.py.
+        // --gpus all exposes all host GPUs to the container (requires nvidia-container-toolkit).
         stage('Train') {
             steps {
                 sh """
                     mkdir -p models/artifacts data/raw
-                    docker run --rm \\
+                    GPU_FLAG=\$([ "${TRAIN_N_GPUS}" -gt 1 ] && echo "--gpus all" || echo "")
+                    TRAIN_CMD=\$([ "${TRAIN_N_GPUS}" -gt 1 ] \
+                        && echo "torchrun --standalone --nproc_per_node=${TRAIN_N_GPUS} train_ddp.py" \
+                        || echo "python train.py")
+                    docker run --rm \${GPU_FLAG} \\
                         -v \${WORKSPACE}/models:/app/models \\
                         -v \${WORKSPACE}/data:/app/data \\
                         -e MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI} \\
@@ -137,7 +145,7 @@ for f in ['configs/base.yaml','configs/data.yaml','configs/model.yaml','configs/
                         -e DOCKER_IMAGE_TAG=${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} \\
                         -e GIT_COMMIT_HASH=${env.GIT_COMMIT} \\
                         ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} \\
-                        python train.py
+                        \${TRAIN_CMD}
                 """
             }
         }
