@@ -7,6 +7,7 @@ Run from project root::
 
     python scripts/register_model.py
 """
+
 from __future__ import annotations
 
 import logging
@@ -35,9 +36,7 @@ def main() -> None:
     cfg = load_config(*DEFAULT_CONFIGS)
     base_cfg = cfg.get("project", {})
 
-    tracking_uri = os.getenv(
-        "MLFLOW_TRACKING_URI", base_cfg.get("mlflow_tracking_uri", "mlruns")
-    )
+    tracking_uri = os.getenv("MLFLOW_TRACKING_URI", base_cfg.get("mlflow_tracking_uri", "mlruns"))
     mlflow.set_tracking_uri(tracking_uri)
 
     run_id_file = MODEL_DIR / "run_id.txt"
