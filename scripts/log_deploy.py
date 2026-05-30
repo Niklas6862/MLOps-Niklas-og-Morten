@@ -1,14 +1,3 @@
-"""Log a deployment event to MLflow and promote the model to Production.
-
-Reads the run ID from ``models/artifacts/run_id.txt``, tags the training run
-as deployed, and transitions the latest *Staging* version of the registered
-model to *Production* (archiving any existing Production versions).
-
-Run from project root::
-
-    python scripts/log_deploy.py
-"""
-
 from __future__ import annotations
 
 import logging
@@ -47,7 +36,6 @@ def main() -> None:
 
     run_id = run_id_file.read_text().strip()
 
-    # Tag the training run with deployment metadata
     with mlflow.start_run(run_id=run_id):
         mlflow.set_tags(
             {
@@ -58,7 +46,6 @@ def main() -> None:
         )
     logger.info("Deployment tags logged to MLflow run %s.", run_id)
 
-    # Promote the latest Staging version to Production
     client = mlflow.tracking.MlflowClient()
     staging_versions = client.get_latest_versions(MODEL_NAME, stages=["Staging"])
     if not staging_versions:
