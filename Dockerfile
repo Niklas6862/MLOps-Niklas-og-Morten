@@ -44,9 +44,10 @@ ENV PATH="/app/.venv/bin:$PATH" \
     HF_HOME=/app/models/hf_cache
 
 # Copy source code and configs (ordered by change frequency)
-COPY configs/ ./configs/
-COPY src/      ./src/
-COPY train.py evaluate.py inference.py ./
+COPY configs/  ./configs/
+COPY src/       ./src/
+COPY scripts/  ./scripts/
+COPY train.py train_ddp.py evaluate.py inference.py ./
 
 # Create runtime directories
 RUN mkdir -p data/raw data/processed models/artifacts models/hf_cache mlruns
