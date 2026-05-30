@@ -10,8 +10,9 @@
 //   7.  Docker Push       — push both :<commit> and :latest to registry
 //   8.  Train             — run train.py inside the container with lineage env vars
 //   9.  Evaluate          — run evaluate.py; fails if accuracy < MIN_ACCURACY
-//  10.  Register Model    — register model artifact to MLflow Model Registry (Staging)
-//  11.  Deploy            — promote to Production and log deployment (main branch only)
+//  10.  Compress          — dynamic INT8 quantization + latency benchmark → MLflow
+//  11.  Register Model    — register model artifact to MLflow Model Registry (Staging)
+//  12.  Deploy            — promote to Production and log deployment (main branch only)
 //
 // Branch protection:
 //   Configure GitHub repo → Settings → Branches → Require status checks → "continuous-integration/jenkins/branch"
@@ -69,8 +70,8 @@ pipeline {
         // ── 3. Lint ─────────────────────────────────────────────────────────────
         stage('Lint') {
             steps {
-                sh 'ruff check src/ tests/ train.py train_ddp.py evaluate.py inference.py scripts/'
-                sh 'ruff format --check src/ tests/ train.py train_ddp.py evaluate.py inference.py scripts/'
+                sh 'ruff check src/ tests/ train.py train_ddp.py evaluate.py inference.py compress.py batch_inference.py scripts/'
+                sh 'ruff format --check src/ tests/ train.py train_ddp.py evaluate.py inference.py compress.py batch_inference.py scripts/'
             }
         }
 
@@ -92,8 +93,9 @@ pipeline {
             steps {
                 sh '''
                     set -e
-                    for f in train.py evaluate.py inference.py pyproject.toml Dockerfile \
-                              scripts/register_model.py scripts/log_deploy.py; do
+                    for f in train.py evaluate.py inference.py compress.py batch_inference.py \
+                              pyproject.toml Dockerfile \
+                              scripts/register_model.py scripts/log_deploy.py scripts/compress.sh; do
                         test -f "$f" || { echo "ERROR: missing $f"; exit 1; }
                     done
                     for d in src configs tests scripts; do
@@ -173,7 +175,29 @@ for f in ['configs/base.yaml','configs/data.yaml','configs/model.yaml','configs/
             }
         }
 
-        // ── 10. Register Model ───────────────────────────────────────────────────
+        // ── 10. Compress ─────────────────────────────────────────────────────────
+        // Apply dynamic INT8 quantization to the trained model, benchmark latency
+        // and throughput vs. the baseline, and log the results to MLflow.
+        // The compression report is archived as a Jenkins artifact.
+        stage('Compress') {
+            steps {
+                sh """
+                    docker run --rm \\
+                        -v \${WORKSPACE}/models:/app/models \\
+                        -v \${WORKSPACE}/data:/app/data \\
+                        -e MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI} \\
+                        ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} \\
+                        python compress.py --method dynamic_quant --output models/artifacts/compression_report.json
+                """
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'models/artifacts/compression_report.json', allowEmptyArchive: true
+                }
+            }
+        }
+
+        // ── 11. Register Model ───────────────────────────────────────────────────
         // Register the trained model artifact to the MLflow Model Registry and
         // move it to Staging.  Uses the run ID written by train.py.
         stage('Register Model') {
@@ -188,7 +212,7 @@ for f in ['configs/base.yaml','configs/data.yaml','configs/model.yaml','configs/
             }
         }
 
-        // ── 11. Deploy ───────────────────────────────────────────────────────────
+        // ── 12. Deploy ───────────────────────────────────────────────────────────
         // Promote the Staging model to Production and log the deployment event back
         // to the training MLflow run.  Only runs on the main branch.
         stage('Deploy') {
