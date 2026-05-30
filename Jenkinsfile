@@ -8,7 +8,7 @@
 //   5.  Validate          — assert required files / YAML integrity
 //   6.  Docker Build      — build training image, tag with git commit hash
 //   7.  Docker Push       — push both :<commit> and :latest to registry
-//   8.  Train             — run train.py inside the container with lineage env vars
+//   8.  Train             — run train_amp.py (AMP) inside the container with lineage env vars
 //   9.  Evaluate          — run evaluate.py; fails if accuracy < MIN_ACCURACY
 //  10.  Compress          — dynamic INT8 quantization + latency benchmark → MLflow
 //  11.  Register Model    — register model artifact to MLflow Model Registry (Staging)
@@ -26,10 +26,15 @@ pipeline {
     agent any
 
     parameters {
-        string(
-            name: 'TRAIN_N_GPUS',
-            defaultValue: '1',
-            description: 'Number of GPUs for training. Set > 1 to use DDP (torchrun). Requires nvidia-container-toolkit on the agent.'
+        booleanParam(
+            name: 'USE_AMP',
+            defaultValue: true,
+            description: 'Use AMP (FP16) training script (train_amp.py). Uncheck to run the standard FP32 script (train.py).'
+        )
+        booleanParam(
+            name: 'SKIP_COMPRESS',
+            defaultValue: false,
+            description: 'Skip the Compress stage (useful when testing AMP training only).'
         )
     }
 
@@ -42,7 +47,6 @@ pipeline {
         REGISTRY           = "${env.DOCKER_REGISTRY ?: '172.24.198.42:5000'}"
         MLFLOW_TRACKING_URI = "${env.MLFLOW_URI ?: 'http://172.24.198.42:5050'}"
         MIN_ACCURACY       = "0.80"
-        TRAIN_N_GPUS       = "${params.TRAIN_N_GPUS ?: '1'}"
         PATH               = "${WORKSPACE}/.venv/bin:${env.PATH}"
     }
 
@@ -70,8 +74,8 @@ pipeline {
         // ── 3. Lint ─────────────────────────────────────────────────────────────
         stage('Lint') {
             steps {
-                sh 'ruff check src/ tests/ train.py train_ddp.py evaluate.py inference.py compress.py batch_inference.py scripts/'
-                sh 'ruff format --check src/ tests/ train.py train_ddp.py evaluate.py inference.py compress.py batch_inference.py scripts/'
+                sh 'ruff check src/ tests/ train.py train_amp.py evaluate.py inference.py compress.py batch_inference.py scripts/'
+                sh 'ruff format --check src/ tests/ train.py train_amp.py evaluate.py inference.py compress.py batch_inference.py scripts/'
             }
         }
 
@@ -133,20 +137,15 @@ for f in ['configs/base.yaml','configs/data.yaml','configs/model.yaml','configs/
         }
 
         // ── 8. Train ─────────────────────────────────────────────────────────────
-        // Run training inside the exact image that was just pushed.
-        // When TRAIN_N_GPUS > 1 the container launches train_ddp.py via torchrun
-        // (DDP + AMP); otherwise falls back to the single-GPU train.py.
-        // --gpus all exposes all host GPUs to the container (requires nvidia-container-toolkit).
+        // USE_AMP=true  → train_amp.py (FP16 AMP, falls back to FP32 on CPU)
+        // USE_AMP=false → train.py     (standard FP32 Trainer)
         stage('Train') {
             options { timeout(time: 60, unit: 'MINUTES') }
             steps {
                 sh """
                     mkdir -p models/artifacts data/raw
-                    GPU_FLAG=\$([ "${TRAIN_N_GPUS}" -gt 1 ] && echo "--gpus all" || echo "")
-                    TRAIN_CMD=\$([ "${TRAIN_N_GPUS}" -gt 1 ] \
-                        && echo "torchrun --standalone --nproc_per_node=${TRAIN_N_GPUS} train_ddp.py" \
-                        || echo "python train.py")
-                    docker run --rm \${GPU_FLAG} --shm-size=2g --stop-timeout=5 \\
+                    TRAIN_SCRIPT=\$([ "${params.USE_AMP}" = "true" ] && echo "train_amp.py" || echo "train.py")
+                    docker run --rm --shm-size=2g --stop-timeout=5 \\
                         -v \${WORKSPACE}/models:/app/models \\
                         -v \${WORKSPACE}/data:/app/data \\
                         -e MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI} \\
@@ -154,7 +153,7 @@ for f in ['configs/base.yaml','configs/data.yaml','configs/model.yaml','configs/
                         -e DOCKER_IMAGE_TAG=${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} \\
                         -e GIT_COMMIT_HASH=${env.GIT_COMMIT} \\
                         ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} \\
-                        \${TRAIN_CMD}
+                        python \${TRAIN_SCRIPT}
                 """
             }
         }
@@ -179,7 +178,11 @@ for f in ['configs/base.yaml','configs/data.yaml','configs/model.yaml','configs/
         // Apply dynamic INT8 quantization to the trained model, benchmark latency
         // and throughput vs. the baseline, and log the results to MLflow.
         // The compression report is archived as a Jenkins artifact.
+        // Set SKIP_COMPRESS=true to bypass this stage (e.g. when testing AMP only).
         stage('Compress') {
+            when {
+                not { expression { params.SKIP_COMPRESS } }
+            }
             steps {
                 sh """
                     docker run --rm \\
