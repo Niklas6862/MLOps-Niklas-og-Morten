@@ -8,6 +8,7 @@ Run from project root::
 
     python scripts/log_deploy.py
 """
+
 from __future__ import annotations
 
 import logging
@@ -36,9 +37,7 @@ def main() -> None:
     cfg = load_config(*DEFAULT_CONFIGS)
     base_cfg = cfg.get("project", {})
 
-    tracking_uri = os.getenv(
-        "MLFLOW_TRACKING_URI", base_cfg.get("mlflow_tracking_uri", "mlruns")
-    )
+    tracking_uri = os.getenv("MLFLOW_TRACKING_URI", base_cfg.get("mlflow_tracking_uri", "mlruns"))
     mlflow.set_tracking_uri(tracking_uri)
 
     run_id_file = MODEL_DIR / "run_id.txt"
@@ -63,7 +62,9 @@ def main() -> None:
     client = mlflow.tracking.MlflowClient()
     staging_versions = client.get_latest_versions(MODEL_NAME, stages=["Staging"])
     if not staging_versions:
-        logger.warning("No model version found in Staging for '%s' — nothing to promote.", MODEL_NAME)
+        logger.warning(
+            "No model version found in Staging for '%s' — nothing to promote.", MODEL_NAME
+        )
         sys.exit(0)
 
     latest = staging_versions[0]
@@ -73,9 +74,7 @@ def main() -> None:
         stage="Production",
         archive_existing_versions=True,
     )
-    logger.info(
-        "Model '%s' version %s promoted to Production.", MODEL_NAME, latest.version
-    )
+    logger.info("Model '%s' version %s promoted to Production.", MODEL_NAME, latest.version)
 
 
 if __name__ == "__main__":
