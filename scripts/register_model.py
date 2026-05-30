@@ -35,20 +35,37 @@ def main() -> None:
         sys.exit(1)
 
     run_id = run_id_file.read_text().strip()
+    if not run_id:
+        logger.error("run_id.txt is empty — was train.py successful?")
+        sys.exit(1)
+
     logger.info("Registering model from MLflow run %s", run_id)
 
     model_uri = f"runs:/{run_id}/model"
     result = mlflow.register_model(model_uri=model_uri, name=MODEL_NAME)
-    logger.info("Registered '%s' version %s", MODEL_NAME, result.version)
+
+    if result is None or result.version is None:
+        logger.error("mlflow.register_model returned no version — model URI may be wrong: %s", model_uri)
+        sys.exit(1)
+
+    version = str(result.version)
+    logger.info("Registered '%s' version %s", MODEL_NAME, version)
 
     client = mlflow.tracking.MlflowClient()
-    client.transition_model_version_stage(
-        name=MODEL_NAME,
-        version=result.version,
-        stage="Staging",
-        archive_existing_versions=False,
-    )
-    logger.info("Model version %s transitioned to Staging.", result.version)
+
+    # transition_model_version_stage is deprecated in MLflow 2.9+; use aliases instead.
+    try:
+        client.set_registered_model_alias(name=MODEL_NAME, alias="staging", version=version)
+        logger.info("Model version %s aliased as 'staging'.", version)
+    except Exception as exc:
+        logger.warning("set_registered_model_alias failed (%s), falling back to stage transition.", exc)
+        client.transition_model_version_stage(
+            name=MODEL_NAME,
+            version=version,
+            stage="Staging",
+            archive_existing_versions=False,
+        )
+        logger.info("Model version %s transitioned to Staging.", version)
 
 
 if __name__ == "__main__":
