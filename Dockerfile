@@ -38,6 +38,7 @@ COPY --from=builder /app/.venv /app/.venv
 
 # Prepend venv to PATH so every python/pip call uses it
 ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONPATH="/app" \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     TRANSFORMERS_CACHE=/app/models/hf_cache \
