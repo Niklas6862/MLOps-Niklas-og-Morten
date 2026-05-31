@@ -144,7 +144,7 @@ for f in ['configs/base.yaml','configs/data.yaml','configs/model.yaml','configs/
                         -v \${WORKSPACE}/data:/app/data \\
                         -e MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI} \\
                         ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} \\
-                        python compress.py --method dynamic_quant --output models/artifacts/compression_report.json
+                        python compress.py --method prune --prune-amount 0.3 --output models/artifacts/compression_report.json
                 """
             }
             post {
