@@ -106,7 +106,7 @@ for f in ['configs/base.yaml','configs/data.yaml','configs/model.yaml','configs/
                 sh """
                     mkdir -p models/artifacts data/raw
                     TRAIN_SCRIPT=\$([ "${params.USE_AMP}" = "true" ] && echo "train_amp.py" || echo "train.py")
-                    docker run --rm --shm-size=2g --stop-timeout=5 \\
+                    docker run --rm --gpus all --shm-size=2g --stop-timeout=5 \\
                         -v \${WORKSPACE}/models:/app/models \\
                         -v \${WORKSPACE}/data:/app/data \\
                         -e MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI} \\
