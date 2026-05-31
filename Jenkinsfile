@@ -46,8 +46,8 @@ pipeline {
 
         stage('Lint') {
             steps {
-                sh 'ruff check src/ tests/ train.py train_amp.py evaluate.py inference.py compress.py batch_inference.py scripts/'
-                sh 'ruff format --check src/ tests/ train.py train_amp.py evaluate.py inference.py compress.py batch_inference.py scripts/'
+                sh 'ruff check src/ tests/ train.py train_amp.py evaluate.py inference.py compress.py batch_inference.py detect_drift.py scripts/'
+                sh 'ruff format --check src/ tests/ train.py train_amp.py evaluate.py inference.py compress.py batch_inference.py detect_drift.py scripts/'
             }
         }
 
@@ -67,7 +67,7 @@ pipeline {
             steps {
                 sh '''
                     set -e
-                    for f in train.py evaluate.py inference.py compress.py batch_inference.py \
+                    for f in train.py evaluate.py inference.py compress.py batch_inference.py detect_drift.py \
                               pyproject.toml Dockerfile \
                               scripts/register_model.py scripts/log_deploy.py scripts/compress.sh; do
                         test -f "$f" || { echo "ERROR: missing $f"; exit 1; }
@@ -130,6 +130,28 @@ for f in ['configs/base.yaml','configs/data.yaml','configs/model.yaml','configs/
                         ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} \\
                         python evaluate.py --min-accuracy ${MIN_ACCURACY}
                 """
+            }
+        }
+
+        stage('Detect Drift') {
+            steps {
+                sh """
+                    docker run --rm \\
+                        -v \${WORKSPACE}/models:/app/models \\
+                        -v \${WORKSPACE}/data:/app/data \\
+                        -e MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI} \\
+                        -e JENKINS_BUILD_NUMBER=${env.BUILD_NUMBER} \\
+                        ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} \\
+                        python detect_drift.py \\
+                            --current-split validation \\
+                            --save-reference models/artifacts/reference.npz \\
+                            --output models/artifacts/drift_report.json
+                """
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'models/artifacts/drift_report.json', allowEmptyArchive: true
+                }
             }
         }
 
