@@ -42,3 +42,38 @@ services:
       - "5000:5000"
     volumes:
       - ./mlruns:/mlruns
+
+  monitoring-api:
+    image: python:3.12-slim
+    working_dir: /app
+    command: >
+      sh -c "pip install --quiet fastapi prometheus-client prometheus-fastapi-instrumentator uvicorn pydantic &&
+             uvicorn monitoring_api:app --host 0.0.0.0 --port 8000"
+    volumes:
+      - ./monitoring_api.py:/app/monitoring_api.py
+    ports:
+      - "8000:8000"
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command: --config.file=/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_INSTALL_PLUGINS=frser-sqlite-datasource
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/mlops.json
+    volumes:
+      - ./monitoring:/var/lib/grafana/monitoring
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - prometheus
