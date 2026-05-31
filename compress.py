@@ -160,7 +160,7 @@ def _log_to_mlflow(report: dict, model_dir: str) -> None:
     # with its own metric columns so baseline vs. compressed are directly comparable.
     with mlflow.start_run(run_id=parent_run_id):
         with mlflow.start_run(run_name=f"compression-{method}", nested=True) as child:
-            mlflow.set_tags({"compressed": "true", "compression_method": method})
+            mlflow.set_tags({"run_type": "compression", "compression_method": method})
 
             baseline = report.get("baseline", {})
             compressed = report.get("compressed", {})
