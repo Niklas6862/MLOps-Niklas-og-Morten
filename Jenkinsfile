@@ -29,6 +29,7 @@ pipeline {
             steps {
                 checkout scm
                 echo "Branch: ${env.BRANCH_NAME} | Commit: ${env.GIT_COMMIT?.take(8)}"
+                sh 'rm -rf models/'
             }
         }
 
