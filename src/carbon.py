@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import re
 from pathlib import Path
 from typing import Any
 
@@ -45,43 +44,33 @@ class CarbonTrackerCallback(TrainerCallback):
 
 
 def parse_carbon_log(log_dir: str | Path) -> dict[str, float] | None:
-    """Parse the latest carbontracker output log and return energy + CO2 values.
+    """Parse carbontracker logs using the official parser and return energy + CO2.
 
-    Returns None if no log file is found or the expected entries are missing.
+    Returns None if no logs exist or actual consumption data is unavailable.
     """
-    log_dir = Path(log_dir)
-    candidates = sorted(log_dir.glob("*.log"))
-    if not candidates:
-        logger.warning("No carbontracker log files found in '%s'.", log_dir)
+    try:
+        from carbontracker.parser import parse_all_logs
+
+        logs = parse_all_logs(log_dir=str(log_dir))
+        if not logs:
+            logger.warning("No carbontracker logs found in '%s'.", log_dir)
+            return None
+
+        actual = logs[-1].get("actual")
+        if actual is None:
+            logger.warning("Carbontracker log has no actual consumption data.")
+            return None
+
+        energy = actual.get("energy (kWh)")
+        co2 = actual.get("co2eq (g)")
+        if energy is None or co2 is None:
+            logger.warning("Missing energy/CO2 fields in carbontracker data: %s", actual)
+            return None
+
+        return {"energy_kwh": float(energy), "co2_g": float(co2)}
+    except Exception as exc:
+        logger.warning("Could not parse carbontracker logs: %s", exc)
         return None
-
-    # Prefer *_output.log if present, otherwise take the latest file
-    output_logs = [p for p in candidates if "output" in p.name]
-    log_path = output_logs[-1] if output_logs else candidates[-1]
-    text = log_path.read_text(errors="replace")
-
-    # Find the "Actual consumption" block (not the "Predicted" block)
-    actual = re.search(
-        r"Actual consumption.*?(?=Predicted consumption|CarbonTracker: Finished|$)",
-        text,
-        re.DOTALL | re.IGNORECASE,
-    )
-    if not actual:
-        logger.warning("Could not find 'Actual consumption' block in '%s'.", log_path)
-        return None
-
-    block = actual.group(0)
-    energy = re.search(r"Energy\s*\(kWh\)\s*[:\s]+([\d.]+)", block)
-    co2 = re.search(r"CO2eq\s*\(g\)\s*[:\s]+([\d.]+)", block)
-
-    if not energy or not co2:
-        logger.warning("Could not parse energy/CO2 values from '%s'.", log_path)
-        return None
-
-    return {
-        "energy_kwh": float(energy.group(1)),
-        "co2_g": float(co2.group(1)),
-    }
 
 
 def extrapolate_costs(
