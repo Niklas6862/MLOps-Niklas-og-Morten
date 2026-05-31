@@ -1,0 +1,610 @@
+{
+  "title": "MLOps Model Monitoring",
+  "uid": "mlops-monitoring",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-90d", "to": "now" },
+  "tags": ["mlops"],
+  "panels": [
+    {
+      "type": "row",
+      "id": 1,
+      "title": "D6.1 & D6.2 — Carbon Footprint",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "id": 2,
+      "title": "Training Energy (kWh)",
+      "description": "D6.1 — Energy consumed during the last training run",
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "sqlite-monitoring" },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "targets": [{ "queryText": "SELECT carbon_energy_kwh FROM training_metrics ORDER BY start_time DESC LIMIT 1", "refId": "A" }],
+      "options": {
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatth", "decimals": 5,
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 0.01 },
+            { "color": "red", "value": 0.1 }
+          ]}
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "id": 3,
+      "title": "Training CO₂ (g)",
+      "description": "D6.1 — CO₂ emitted during the last training run",
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "sqlite-monitoring" },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+      "targets": [{ "queryText": "SELECT ROUND(carbon_co2_g, 4) FROM training_metrics ORDER BY start_time DESC LIMIT 1", "refId": "A" }],
+      "options": {
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short", "decimals": 4, "displayName": "g CO₂",
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 5 },
+            { "color": "red", "value": 50 }
+          ]}
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "id": 4,
+      "title": "Yearly Training CO₂ (kg)",
+      "description": "D6.2 — Extrapolated to 12 retrains/year",
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "sqlite-monitoring" },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "targets": [{ "queryText": "SELECT ROUND(carbon_yearly_training_co2_kg, 4) FROM training_metrics ORDER BY start_time DESC LIMIT 1", "refId": "A" }],
+      "options": {
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short", "decimals": 4, "displayName": "kg CO₂/yr (training)",
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 0.1 },
+            { "color": "red", "value": 1 }
+          ]}
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "id": 5,
+      "title": "CO₂ per Request (g)",
+      "description": "D6.2 — CO₂ emitted per inference request (training energy scaled by sample count)",
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "sqlite-monitoring" },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+      "targets": [{ "queryText": "SELECT ROUND(carbon_co2_per_request_g, 8) FROM training_metrics ORDER BY start_time DESC LIMIT 1", "refId": "A" }],
+      "options": {
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short", "decimals": 8, "displayName": "g CO₂/request",
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "id": 6,
+      "title": "Yearly Inference CO₂ (kg)",
+      "description": "D6.2 — CO₂ for 1,000 requests/day over one year",
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "sqlite-monitoring" },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+      "targets": [{ "queryText": "SELECT ROUND(carbon_yearly_inference_co2_kg, 4) FROM training_metrics ORDER BY start_time DESC LIMIT 1", "refId": "A" }],
+      "options": {
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short", "decimals": 4, "displayName": "kg CO₂/yr (inference)",
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 0.1 },
+            { "color": "red", "value": 1 }
+          ]}
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "text",
+      "id": 7,
+      "title": "D6.2: Assumptions",
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+      "options": {
+        "mode": "markdown",
+        "content": "**Yearly CO₂ Assumptions**\n\n| Parameter | Value |\n|---|---|\n| Retrains / year | 12 |\n| Requests / day | 1,000 |\n| Inference CO₂ | scaled from training energy per sample |\n\nYearly inference CO₂ = CO₂/request × 365,000 requests"
+      },
+      "fieldConfig": { "defaults": {}, "overrides": [] }
+    },
+    {
+      "type": "table",
+      "id": 8,
+      "title": "D6.1 & D6.2: Carbon Footprint per Training Run",
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "sqlite-monitoring" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 5 },
+      "targets": [{
+        "queryText": "SELECT run_name as 'Run', datetime(start_time/1000, 'unixepoch') as 'Time', ROUND(carbon_energy_kwh,5) as 'Energy (kWh)', ROUND(carbon_co2_g,4) as 'CO2 (g)', ROUND(carbon_yearly_training_co2_kg,4) as 'Yearly Training CO2 (kg)', ROUND(carbon_co2_per_request_g,8) as 'CO2/Request (g)', ROUND(carbon_yearly_inference_co2_kg,4) as 'Yearly Inference CO2 (kg)' FROM training_metrics ORDER BY start_time DESC",
+        "refId": "A"
+      }],
+      "options": { "footer": { "show": false } },
+      "fieldConfig": { "defaults": {}, "overrides": [] }
+    },
+    {
+      "type": "row",
+      "id": 9,
+      "title": "D6.3 — Drift Detection",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 13 },
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "id": 10,
+      "title": "Overall Drift Detected (latest check)",
+      "description": "D6.3 — 1 = drift detected, 0 = stable. Triggers retraining pipeline when true.",
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "sqlite-monitoring" },
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 14 },
+      "targets": [{ "queryText": "SELECT overall_drift_detected FROM drift_metrics ORDER BY start_time DESC LIMIT 1", "refId": "A" }],
+      "options": {
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "red", "value": 1 }
+          ]},
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "No Drift", "color": "green", "index": 0 }, "1": { "text": "DRIFT DETECTED", "color": "red", "index": 1 } } }
+          ]
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "id": 11,
+      "title": "Data Drift Fraction (KS test)",
+      "description": "D6.3 — Fraction of embedding dimensions with significant KS test (Bonferroni corrected). Threshold: 0.10.",
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "sqlite-monitoring" },
+      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 14 },
+      "targets": [{ "queryText": "SELECT ROUND(data_drift_fraction, 4) FROM drift_metrics ORDER BY start_time DESC LIMIT 1", "refId": "A" }],
+      "options": {
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit", "decimals": 2,
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 0.05 },
+            { "color": "red", "value": 0.10 }
+          ]}
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "id": 12,
+      "title": "Prediction Drift (KL Divergence)",
+      "description": "D6.3 — KL divergence between reference and current predicted class distributions. Threshold: 0.10.",
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "sqlite-monitoring" },
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 14 },
+      "targets": [{ "queryText": "SELECT ROUND(pred_drift_kl_divergence, 4) FROM drift_metrics ORDER BY start_time DESC LIMIT 1", "refId": "A" }],
+      "options": {
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short", "decimals": 4, "displayName": "KL divergence",
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 0.05 },
+            { "color": "red", "value": 0.10 }
+          ]}
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "text",
+      "id": 13,
+      "title": "D6.3: Drift Mitigation Strategy",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 18 },
+      "options": {
+        "mode": "markdown",
+        "content": "### Drift Detection\n\n**Method**: KS test on ViT CLS-token embeddings (100 random dims, Bonferroni corrected) + KL divergence on predicted class distributions.\n\n**Thresholds**\n- Data drift: > 10% of embedding dims reject H₀ → flag\n- Prediction drift: KL divergence > 0.10 → flag\n\n### Mitigation Response\n\n1. **Alert**: Grafana alert fires when drift detected = 1\n2. **Investigate**: Compare reference vs current class distributions\n3. **Retrain**: Trigger Jenkins pipeline with fresh labelled data\n4. **Validate**: Re-run drift check post-training — expect drift fraction < 0.05\n5. **Deploy**: Promote model if accuracy meets threshold"
+      },
+      "fieldConfig": { "defaults": {}, "overrides": [] }
+    },
+    {
+      "type": "table",
+      "id": 14,
+      "title": "D6.3: Drift Check History",
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "sqlite-monitoring" },
+      "gridPos": { "h": 8, "w": 16, "x": 8, "y": 18 },
+      "targets": [{
+        "queryText": "SELECT datetime(start_time/1000, 'unixepoch') as 'Time', COALESCE(artificial_shift,'none') as 'Shift Type', ROUND(data_drift_fraction,4) as 'Data Drift Frac', ROUND(pred_drift_kl_divergence,4) as 'KL Divergence', CASE overall_drift_detected WHEN 1 THEN 'YES' ELSE 'no' END as 'Drift Detected' FROM drift_metrics ORDER BY start_time DESC",
+        "refId": "A"
+      }],
+      "options": { "footer": { "show": false } },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Drift Detected" },
+            "properties": [{
+              "id": "custom.displayMode",
+              "value": "color-background"
+            }, {
+              "id": "mappings",
+              "value": [
+                { "type": "value", "options": { "YES": { "color": "red", "index": 0 }, "no": { "color": "green", "index": 1 } } }
+              ]
+            }]
+          }
+        ]
+      }
+    },
+    {
+      "type": "row",
+      "id": 15,
+      "title": "D6.4 — Model Monitoring",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 26 },
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "id": 16,
+      "title": "Latest Eval Accuracy",
+      "description": "D6.4 — Accuracy on validation set from most recent training run",
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "sqlite-monitoring" },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 27 },
+      "targets": [{ "queryText": "SELECT ROUND(eval_accuracy, 4) FROM training_metrics ORDER BY start_time DESC LIMIT 1", "refId": "A" }],
+      "options": {
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit", "decimals": 2,
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": null },
+            { "color": "yellow", "value": 0.70 },
+            { "color": "green", "value": 0.90 }
+          ]}
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "id": 17,
+      "title": "Model Size (MB)",
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "sqlite-monitoring" },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 27 },
+      "targets": [{ "queryText": "SELECT ROUND(model_size_mb, 1) FROM training_metrics ORDER BY start_time DESC LIMIT 1", "refId": "A" }],
+      "options": {
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decmbytes",
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "id": 18,
+      "title": "Best Compression Speedup",
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "sqlite-monitoring" },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 27 },
+      "targets": [{ "queryText": "SELECT ROUND(MAX(speedup_x), 2) FROM compression_metrics", "refId": "A" }],
+      "options": {
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short", "displayName": "max speedup (x)",
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "blue", "value": null },
+            { "color": "green", "value": 1.2 }
+          ]}
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "id": 19,
+      "title": "Total Training Runs",
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "sqlite-monitoring" },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 27 },
+      "targets": [{ "queryText": "SELECT COUNT(*) FROM training_metrics", "refId": "A" }],
+      "options": {
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "none", "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short", "displayName": "runs",
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "text", "value": null }] }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "table",
+      "id": 20,
+      "title": "D6.4: All Training Runs",
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "sqlite-monitoring" },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 31 },
+      "targets": [{
+        "queryText": "SELECT run_name as 'Run', datetime(start_time/1000, 'unixepoch') as 'Time', model_name as 'Model', ROUND(eval_accuracy,4) as 'Val Accuracy', ROUND(model_size_mb,1) as 'Size (MB)', num_epochs as 'Epochs', ROUND(carbon_co2_g,4) as 'CO2 (g)', ROUND(carbon_energy_kwh,5) as 'Energy (kWh)' FROM training_metrics ORDER BY start_time DESC",
+        "refId": "A"
+      }],
+      "options": { "footer": { "show": false } },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Val Accuracy" },
+            "properties": [{
+              "id": "custom.displayMode", "value": "color-background"
+            }, {
+              "id": "thresholds",
+              "value": { "mode": "absolute", "steps": [
+                { "color": "red", "value": null },
+                { "color": "yellow", "value": 0.70 },
+                { "color": "green", "value": 0.90 }
+              ]}
+            }, {
+              "id": "color", "value": { "mode": "thresholds" }
+            }]
+          }
+        ]
+      }
+    },
+    {
+      "type": "table",
+      "id": 21,
+      "title": "D6.4: Compression & Pruning Results",
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "sqlite-monitoring" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 40 },
+      "targets": [{
+        "queryText": "SELECT run_name as 'Run', datetime(start_time/1000, 'unixepoch') as 'Time', compression_method as 'Method', ROUND(baseline_accuracy,4) as 'Baseline Acc', ROUND(compressed_accuracy,4) as 'Compressed Acc', ROUND(accuracy_drop,4) as 'Acc Drop', ROUND(baseline_throughput_fps,1) as 'Baseline FPS', ROUND(compressed_throughput_fps,1) as 'Compressed FPS', ROUND(speedup_x,2) as 'Speedup (x)', ROUND(actual_sparsity*100,1) as 'Sparsity (%)' FROM compression_metrics ORDER BY start_time DESC",
+        "refId": "A"
+      }],
+      "options": { "footer": { "show": false } },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Acc Drop" },
+            "properties": [{
+              "id": "custom.displayMode", "value": "color-background"
+            }, {
+              "id": "thresholds",
+              "value": { "mode": "absolute", "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 0.02 },
+                { "color": "red", "value": 0.05 }
+              ]}
+            }, {
+              "id": "color", "value": { "mode": "thresholds" }
+            }]
+          }
+        ]
+      }
+    },
+    {
+      "type": "row",
+      "id": 22,
+      "title": "D6.4 — Live Inference Monitoring (Prometheus)",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 48 },
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "id": 23,
+      "title": "Request Rate (req/s)",
+      "datasource": { "type": "prometheus", "uid": "prometheus-monitoring" },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 49 },
+      "targets": [{
+        "expr": "sum(rate(http_requests_total{job=\"monitoring-api\"}[1m]))",
+        "legendFormat": "req/s",
+        "refId": "A"
+      }],
+      "options": {
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "area", "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "gauge",
+      "id": 24,
+      "title": "P95 Inference Latency",
+      "datasource": { "type": "prometheus", "uid": "prometheus-monitoring" },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 49 },
+      "targets": [{
+        "expr": "histogram_quantile(0.95, rate(inference_latency_seconds_bucket[5m])) * 1000",
+        "legendFormat": "p95 ms",
+        "refId": "A"
+      }],
+      "options": {
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"] },
+        "orientation": "auto", "showThresholdLabels": false, "showThresholdMarkers": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms", "min": 0, "max": 100,
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 10 },
+            { "color": "red", "value": 50 }
+          ]}
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "gauge",
+      "id": 25,
+      "title": "Median Confidence Score",
+      "datasource": { "type": "prometheus", "uid": "prometheus-monitoring" },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 49 },
+      "targets": [{
+        "expr": "histogram_quantile(0.5, rate(confidence_score_bucket[5m]))",
+        "legendFormat": "p50 confidence",
+        "refId": "A"
+      }],
+      "options": {
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"] },
+        "orientation": "auto", "showThresholdLabels": false, "showThresholdMarkers": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit", "min": 0, "max": 1,
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": null },
+            { "color": "yellow", "value": 0.5 },
+            { "color": "green", "value": 0.8 }
+          ]}
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "id": 26,
+      "title": "Error Rate (5xx)",
+      "datasource": { "type": "prometheus", "uid": "prometheus-monitoring" },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 49 },
+      "targets": [{
+        "expr": "sum(rate(http_requests_total{job=\"monitoring-api\", status_code=~\"5..\"}[1m]))",
+        "legendFormat": "errors/s",
+        "refId": "A"
+      }],
+      "options": {
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "red", "value": 0.01 }
+          ]}
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 27,
+      "title": "Predictions per Second by Class",
+      "datasource": { "type": "prometheus", "uid": "prometheus-monitoring" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 53 },
+      "targets": [{
+        "expr": "rate(predictions_total[1m])",
+        "legendFormat": "{{class_name}}",
+        "refId": "A"
+      }],
+      "options": { "tooltip": { "mode": "multi" } },
+      "fieldConfig": {
+        "defaults": { "unit": "reqps" },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 28,
+      "title": "Inference Latency over Time (p50 / p95 / p99)",
+      "datasource": { "type": "prometheus", "uid": "prometheus-monitoring" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 53 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, rate(inference_latency_seconds_bucket[1m])) * 1000",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, rate(inference_latency_seconds_bucket[1m])) * 1000",
+          "legendFormat": "p95",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, rate(inference_latency_seconds_bucket[1m])) * 1000",
+          "legendFormat": "p99",
+          "refId": "C"
+        }
+      ],
+      "options": { "tooltip": { "mode": "multi" } },
+      "fieldConfig": {
+        "defaults": { "unit": "ms" },
+        "overrides": []
+      }
+    }
+  ]
+}
