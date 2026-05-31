@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import logging
 import os
+import time
 from pathlib import Path
 
 import mlflow
@@ -32,17 +33,24 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _evaluate(model: torch.nn.Module, loader: DataLoader, device: torch.device) -> float:
+def _evaluate(
+    model: torch.nn.Module, loader: DataLoader, device: torch.device
+) -> tuple[float, float]:
     model.eval()
     correct = total = 0
+    total_loss = 0.0
     with torch.no_grad():
         for batch in loader:
             pixel_values = batch["pixel_values"].to(device)
             labels = batch["labels"].to(device)
-            preds = model(pixel_values=pixel_values).logits.argmax(dim=-1)
+            outputs = model(pixel_values=pixel_values, labels=labels)
+            total_loss += outputs.loss.item()
+            preds = outputs.logits.argmax(dim=-1)
             correct += int((preds == labels).sum())
             total += labels.size(0)
-    return correct / total if total else 0.0
+    acc = correct / total if total else 0.0
+    avg_loss = total_loss / len(loader) if loader else 0.0
+    return acc, avg_loss
 
 
 def _build_model_card(cfg: dict, metrics: dict, run_id: str, amp: bool) -> dict:
@@ -168,7 +176,9 @@ def main() -> None:
         logging_steps = training_cfg.get("logging_steps", 10)
         best_val_acc = 0.0
         best_metrics: dict = {}
+        t0 = time.time()
 
+        global_step = 0
         for epoch in range(1, num_epochs + 1):
             model.train()
             epoch_loss = 0.0
@@ -191,8 +201,14 @@ def main() -> None:
                 scheduler.step()
 
                 epoch_loss += loss.item()
+                global_step += 1
 
                 if step % logging_steps == 0:
+                    current_lr = scheduler.get_last_lr()[0]
+                    mlflow.log_metrics(
+                        {"train_loss": loss.item(), "learning_rate": current_lr},
+                        step=global_step,
+                    )
                     logger.info(
                         "Epoch %d/%d | step %d/%d | loss %.4f",
                         epoch,
@@ -203,13 +219,41 @@ def main() -> None:
                     )
 
             avg_loss = epoch_loss / len(train_loader)
-            val_acc = _evaluate(model, val_loader, device)
-            logger.info("Epoch %d | train_loss=%.4f | val_acc=%.4f", epoch, avg_loss, val_acc)
-            mlflow.log_metrics({"train_loss": avg_loss, "eval_accuracy": val_acc}, step=epoch)
+            val_acc, val_loss = _evaluate(model, val_loader, device)
+            logger.info(
+                "Epoch %d | train_loss=%.4f | eval_loss=%.4f | eval_accuracy=%.4f",
+                epoch,
+                avg_loss,
+                val_loss,
+                val_acc,
+            )
+            mlflow.log_metrics(
+                {
+                    "eval_loss": val_loss,
+                    "eval_accuracy": val_acc,
+                    "epoch": epoch,
+                },
+                step=global_step,
+            )
 
             if val_acc > best_val_acc:
                 best_val_acc = val_acc
-                best_metrics = {"train_loss": avg_loss, "eval_accuracy": val_acc}
+                best_metrics = {
+                    "train_loss": avg_loss,
+                    "eval_loss": val_loss,
+                    "eval_accuracy": val_acc,
+                }
+
+        train_runtime = time.time() - t0
+        total_samples = len(processed_ds["train"]) * num_epochs
+        mlflow.log_metrics(
+            {
+                "train_runtime": train_runtime,
+                "train_samples_per_second": total_samples / train_runtime,
+                "train_steps_per_second": global_step / train_runtime,
+                "best_val_accuracy": best_val_acc,
+            }
+        )
 
         logger.info("Saving model to '%s' …", output_dir)
         model.save_pretrained(str(output_dir))
@@ -220,7 +264,6 @@ def main() -> None:
             artifact_path="model",
             task="image-classification",
         )
-        mlflow.log_metric("best_val_accuracy", best_val_acc)
 
         card = _build_model_card(cfg, best_metrics, run.info.run_id, use_amp)
         card_path = output_dir / "model_card.yaml"
