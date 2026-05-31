@@ -71,17 +71,19 @@ def benchmark(
     model: nn.Module,
     dataloader: DataLoader,
     device: str = "cpu",
-    warmup: int = 5,
+    warmup: int = 2,
     n_batches: int = 30,
 ) -> dict[str, float]:
     """Measure per-batch latency and overall throughput."""
     model.eval()
     model.to(device)
+    batches = list(dataloader)
+    warmup = min(warmup, max(0, len(batches) - 1))
     latencies: list[float] = []
     n_samples = 0
 
     with torch.no_grad():
-        for i, batch in enumerate(dataloader):
+        for i, batch in enumerate(batches):
             pv = batch["pixel_values"].to(device)
             if device == "cuda":
                 torch.cuda.synchronize()
