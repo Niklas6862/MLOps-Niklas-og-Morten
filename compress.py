@@ -157,11 +157,13 @@ def _log_to_mlflow(report: dict, model_dir: str) -> None:
     method = report.get("method", "unknown")
 
     with mlflow.start_run(run_name=f"compression-{method}") as run:
-        mlflow.set_tags({
-            "run_type": "compression",
-            "compression_method": method,
-            **({"training_run_id": parent_run_id} if parent_run_id else {}),
-        })
+        mlflow.set_tags(
+            {
+                "run_type": "compression",
+                "compression_method": method,
+                **({"training_run_id": parent_run_id} if parent_run_id else {}),
+            }
+        )
         mlflow.log_params({"compression_method": method})
 
         baseline = report.get("baseline", {})
