@@ -16,7 +16,8 @@ RUN uv venv .venv && \
     pyyaml \
     pillow \
     numpy \
-    scikit-learn
+    scikit-learn \
+    scipy
 
 FROM python:3.12-slim AS runtime
 
@@ -34,7 +35,7 @@ ENV PATH="/app/.venv/bin:$PATH" \
 COPY configs/  ./configs/
 COPY src/       ./src/
 COPY scripts/  ./scripts/
-COPY train.py train_amp.py evaluate.py inference.py compress.py batch_inference.py ./
+COPY train.py train_amp.py evaluate.py inference.py compress.py batch_inference.py detect_drift.py ./
 
 RUN mkdir -p data/raw data/processed models/artifacts models/hf_cache mlruns
 
