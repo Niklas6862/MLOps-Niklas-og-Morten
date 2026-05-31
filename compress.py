@@ -148,49 +148,38 @@ def _save_model(
 
 
 def _log_to_mlflow(report: dict, model_dir: str) -> None:
-    run_id_file = Path(model_dir) / "run_id.txt"
-    if not run_id_file.exists():
-        return
     tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "mlruns")
     mlflow.set_tracking_uri(tracking_uri)
-    parent_run_id = run_id_file.read_text().strip()
+
+    run_id_file = Path(model_dir) / "run_id.txt"
+    parent_run_id = run_id_file.read_text().strip() if run_id_file.exists() else None
+
     method = report.get("method", "unknown")
 
-    # Nested child run — appears indented under the training run in the MLflow UI,
-    # with its own metric columns so baseline vs. compressed are directly comparable.
-    with mlflow.start_run(run_id=parent_run_id):
-        with mlflow.start_run(run_name=f"compression-{method}", nested=True) as child:
-            mlflow.set_tags({"run_type": "compression", "compression_method": method})
+    with mlflow.start_run(run_name=f"compression-{method}") as run:
+        mlflow.set_tags({
+            "run_type": "compression",
+            "compression_method": method,
+            **({"training_run_id": parent_run_id} if parent_run_id else {}),
+        })
+        mlflow.log_params({"compression_method": method})
 
-            baseline = report.get("baseline", {})
-            compressed = report.get("compressed", {})
+        baseline = report.get("baseline", {})
+        compressed = report.get("compressed", {})
 
-            # Log baseline and compressed metrics with clean names (no section prefix)
-            # so they appear as columns in the MLflow comparison view.
-            for k, v in baseline.items():
+        for k, v in baseline.items():
+            if isinstance(v, (int, float)):
+                mlflow.log_metric(f"baseline_{k}", float(v))
+        for k, v in compressed.items():
+            if isinstance(v, (int, float)):
+                mlflow.log_metric(f"compressed_{k}", float(v))
+
+        if "finetuned" in report:
+            for k, v in report["finetuned"].items():
                 if isinstance(v, (int, float)):
-                    mlflow.log_metric(f"baseline_{k}", float(v))
-            for k, v in compressed.items():
-                if isinstance(v, (int, float)):
-                    mlflow.log_metric(f"compressed_{k}", float(v))
+                    mlflow.log_metric(f"finetuned_{k}", float(v))
 
-            if "finetuned" in report:
-                for k, v in report["finetuned"].items():
-                    if isinstance(v, (int, float)):
-                        mlflow.log_metric(f"finetuned_{k}", float(v))
-
-            mlflow.log_params(
-                {
-                    "compression_method": method,
-                    "prune_amount": report.get("compressed", {}).get("pruned_amount", "n/a"),
-                }
-            )
-
-            logger.info(
-                "Compression results logged as child run %s under %s",
-                child.info.run_id,
-                parent_run_id,
-            )
+        logger.info("Compression results logged as run %s", run.info.run_id)
 
 
 def main() -> None:
