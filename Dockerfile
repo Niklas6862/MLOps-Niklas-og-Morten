@@ -17,7 +17,8 @@ RUN uv venv .venv && \
     pillow \
     numpy \
     scikit-learn \
-    scipy
+    scipy \
+    carbontracker
 
 FROM python:3.12-slim AS runtime
 
