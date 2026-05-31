@@ -19,7 +19,16 @@ class CarbonTrackerCallback(TrainerCallback):
         from carbontracker.tracker import CarbonTracker
 
         Path(log_dir).mkdir(parents=True, exist_ok=True)
-        self.tracker = CarbonTracker(epochs=num_epochs, log_dir=log_dir, verbose=2)
+        # components="gpu" skips Intel RAPL CPU registers (/sys/class/powercap/)
+        # which are unavailable inside Docker. ignore_errors=True prevents the
+        # background tracker thread from sending SIGTERM to the main process on failure.
+        self.tracker = CarbonTracker(
+            epochs=num_epochs,
+            log_dir=log_dir,
+            verbose=2,
+            components="gpu",
+            ignore_errors=True,
+        )
         self.log_dir = Path(log_dir)
         self._active = False
 
