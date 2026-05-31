@@ -17,13 +17,12 @@ import mlflow
 import mlflow.transformers
 import torch
 import yaml
-from torch.utils.data import DataLoader
-from transformers import get_linear_schedule_with_warmup
-
 from src.config import load_config
 from src.data import collate_fn, load_image_dataset, preprocess_dataset
 from src.model import load_model_and_processor
 from src.utils import ensure_dir, get_label_mappings, set_seed, setup_logging
+from torch.utils.data import DataLoader
+from transformers import get_linear_schedule_with_warmup
 
 logger = logging.getLogger(__name__)
 
@@ -150,21 +149,25 @@ def main() -> None:
     mlflow.set_experiment(base_cfg.get("experiment_name", "image-classifier"))
 
     with mlflow.start_run() as run:
-        mlflow.set_tags({
-            "jenkins_build_number": os.getenv("JENKINS_BUILD_NUMBER", "local"),
-            "docker_image": os.getenv("DOCKER_IMAGE_TAG", "local"),
-            "git_commit": os.getenv("GIT_COMMIT_HASH", "unknown"),
-            "training_strategy": "AMP" if use_amp else "FP32",
-        })
-        mlflow.log_params({
-            "model_name": model_cfg["name"],
-            "dataset": data_cfg["name"],
-            "seed": base_cfg.get("seed", 42),
-            "num_epochs": num_epochs,
-            "learning_rate": training_cfg.get("learning_rate", 2e-5),
-            "per_device_batch_size": batch_size,
-            "amp_enabled": use_amp,
-        })
+        mlflow.set_tags(
+            {
+                "jenkins_build_number": os.getenv("JENKINS_BUILD_NUMBER", "local"),
+                "docker_image": os.getenv("DOCKER_IMAGE_TAG", "local"),
+                "git_commit": os.getenv("GIT_COMMIT_HASH", "unknown"),
+                "training_strategy": "AMP" if use_amp else "FP32",
+            }
+        )
+        mlflow.log_params(
+            {
+                "model_name": model_cfg["name"],
+                "dataset": data_cfg["name"],
+                "seed": base_cfg.get("seed", 42),
+                "num_epochs": num_epochs,
+                "learning_rate": training_cfg.get("learning_rate", 2e-5),
+                "per_device_batch_size": batch_size,
+                "amp_enabled": use_amp,
+            }
+        )
 
         run_id_path = output_dir / "run_id.txt"
         run_id_path.write_text(run.info.run_id)
@@ -200,7 +203,11 @@ def main() -> None:
                 if step % logging_steps == 0:
                     logger.info(
                         "Epoch %d/%d | step %d/%d | loss %.4f",
-                        epoch, num_epochs, step, len(train_loader), loss.item(),
+                        epoch,
+                        num_epochs,
+                        step,
+                        len(train_loader),
+                        loss.item(),
                     )
 
             avg_loss = epoch_loss / len(train_loader)
