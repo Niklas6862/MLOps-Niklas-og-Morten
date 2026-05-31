@@ -117,6 +117,14 @@ def main() -> None:
                 for metric, val in cls_m.items():
                     if isinstance(val, (int, float)):
                         flat[f"eval_{args.split}_{cls}_{metric}"] = float(val)
+
+            # Macro averages across classes (excluding support)
+            per_class = detailed.get("per_class", {})
+            for metric in ("precision", "recall", "f1"):
+                vals = [v[metric] for v in per_class.values() if metric in v]
+                if vals:
+                    flat[f"eval_{args.split}_macro_{metric}"] = round(float(np.mean(vals)), 4)
+
             mlflow.log_metrics(flat)
         logger.info("Eval metrics logged to MLflow run %s.", run_id)
 

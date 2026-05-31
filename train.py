@@ -8,6 +8,7 @@ from pathlib import Path
 import mlflow
 import mlflow.transformers
 import yaml
+from src.carbon import CarbonTrackerCallback, extrapolate_costs, parse_carbon_log
 from src.config import load_config
 from src.data import collate_fn, load_image_dataset, preprocess_dataset
 from src.model import load_model_and_processor
@@ -115,8 +116,21 @@ def main() -> None:
         label2id, id2label = get_label_mappings(raw_ds)
         logger.info("Label mapping: %s", id2label)
 
+        # Dataset split sizes + class distribution
+        label_col = data_cfg.get("label_column", "labels")
+        split_sizes = {split: len(raw_ds[split]) for split in raw_ds}
+        mlflow.log_params({f"n_{split}": v for split, v in split_sizes.items()})
+        train_labels = raw_ds["train"][label_col]
+        for cls_id, cls_name in id2label.items():
+            count = sum(1 for lbl in train_labels if lbl == cls_id)
+            mlflow.log_metric(f"train_class_{cls_name}", count)
+
         # --- Model ---
         model, processor = load_model_and_processor(model_cfg, label2id, id2label)
+
+        # Trainable parameter count
+        n_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        mlflow.log_param("trainable_params", n_params)
 
         # --- Preprocessing ---
         processed_ds = preprocess_dataset(raw_ds, processor, data_cfg)
@@ -124,6 +138,10 @@ def main() -> None:
 
         # --- Trainer (MLflowCallback uses the active run for step-level metrics) ---
         training_args = get_training_args(training_cfg)
+        num_epochs = training_cfg.get("num_epochs", 3)
+        carbon_log_dir = str(output_dir / "carbon")
+        carbon_cb = CarbonTrackerCallback(num_epochs=num_epochs, log_dir=carbon_log_dir)
+
         trainer = Trainer(
             model=model,
             args=training_args,
@@ -131,16 +149,43 @@ def main() -> None:
             eval_dataset=processed_ds.get("validation"),
             compute_metrics=compute_metrics,
             data_collator=collate_fn,
+            callbacks=[carbon_cb],
         )
 
         logger.info("Starting training …")
         train_result = trainer.train()
         logger.info("Training finished. Metrics: %s", train_result.metrics)
 
+        # --- Carbon footprint ---
+        carbon = parse_carbon_log(carbon_log_dir)
+        if carbon:
+            n_train = len(processed_ds["train"])
+            costs = extrapolate_costs(carbon["energy_kwh"], carbon["co2_g"], n_train)
+            mlflow.log_metrics(
+                {
+                    "carbon_energy_kwh": carbon["energy_kwh"],
+                    "carbon_co2_g": carbon["co2_g"],
+                    "carbon_yearly_training_co2_kg": costs["yearly_training_co2_kg"],
+                    "carbon_co2_per_request_g": costs["co2_per_request_g"],
+                    "carbon_yearly_inference_co2_kg": costs["yearly_inference_co2_kg"],
+                }
+            )
+            logger.info(
+                "Carbon: %.4f kWh | %.4f g CO2 | yearly training %.4f kg CO2",
+                carbon["energy_kwh"],
+                carbon["co2_g"],
+                costs["yearly_training_co2_kg"],
+            )
+        else:
+            logger.warning("Carbon tracking data not available — skipping MLflow carbon metrics.")
+
         # --- Save model to disk ---
         logger.info("Saving model to '%s' …", output_dir)
         trainer.save_model(str(output_dir))
         processor.save_pretrained(str(output_dir))
+
+        model_size_mb = sum(f.stat().st_size for f in output_dir.rglob("*") if f.is_file()) / 1e6
+        mlflow.log_metric("model_size_mb", round(model_size_mb, 2))
 
         # --- Log model to MLflow (transformers flavor enables model registry) ---
         mlflow.transformers.log_model(

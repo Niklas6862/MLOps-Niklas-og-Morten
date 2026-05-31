@@ -213,6 +213,10 @@ def main() -> None:
 
     report: dict = {"method": args.method, "model_dir": str(model_dir)}
 
+    # Original model size on disk
+    orig_size_mb = sum(f.stat().st_size for f in model_dir.rglob("*") if f.is_file()) / 1e6
+    report["baseline_model_size_mb"] = round(orig_size_mb, 2)
+
     # ── Baseline ──────────────────────────────────────────────────────────────
     logger.info("Benchmarking baseline …")
     base_model = _fresh_model()
@@ -302,6 +306,12 @@ def main() -> None:
         comp_lat.get("throughput_fps", 0),
         f"  speedup={speedup:.2f}x" if speedup else "",
     )
+
+    # Compressed model size (only available for prune — dynamic quant runs in-memory)
+    if args.method == "prune" and output_dir.exists():
+        comp_size_mb = sum(f.stat().st_size for f in output_dir.rglob("*") if f.is_file()) / 1e6
+        report["compressed"]["model_size_mb"] = round(comp_size_mb, 2)
+        report["compressed"]["size_reduction_mb"] = round(orig_size_mb - comp_size_mb, 2)
 
     _finalize(report, args.output, args.model_dir, experiment_name)
 
