@@ -106,6 +106,7 @@ def main() -> None:
                 "jenkins_build_number": os.getenv("JENKINS_BUILD_NUMBER", "local"),
                 "docker_image": os.getenv("DOCKER_IMAGE_TAG", "local"),
                 "git_commit": os.getenv("GIT_COMMIT_HASH", "unknown"),
+                "training_strategy": "FP32",
             }
         )
 

@@ -37,10 +37,6 @@ def get_training_args(training_cfg: dict[str, Any]) -> TrainingArguments:
         remove_unused_columns=False,
     )
 
-    # DeepSpeed integration — pass config path when present in training config
-    if "deepspeed" in training_cfg:
-        kwargs["deepspeed"] = training_cfg["deepspeed"]
-
     return TrainingArguments(**kwargs)
 
 
