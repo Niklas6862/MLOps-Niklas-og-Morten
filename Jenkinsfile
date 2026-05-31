@@ -1,27 +1,3 @@
-// Full MLOps pipeline implementing the "Local MLOps Workflow Example" from MM2.
-//
-// Stages
-//   1.  Checkout          — clone the repo
-//   2.  Setup             — install uv + project dependencies on the agent
-//   3.  Lint              — ruff check + format check
-//   4.  Test              — pytest with coverage (fail fast gate)
-//   5.  Validate          — assert required files / YAML integrity
-//   6.  Docker Build      — build training image, tag with git commit hash
-//   7.  Docker Push       — push both :<commit> and :latest to registry
-//   8.  Train             — run train_amp.py (AMP) inside the container with lineage env vars
-//   9.  Evaluate          — run evaluate.py; fails if accuracy < MIN_ACCURACY
-//  10.  Compress          — dynamic INT8 quantization + latency benchmark → MLflow
-//  11.  Register Model    — register model artifact to MLflow Model Registry (Staging)
-//  12.  Deploy            — promote to Production and log deployment (main branch only)
-//
-// Branch protection:
-//   Configure GitHub repo → Settings → Branches → Require status checks → "continuous-integration/jenkins/branch"
-//   before merging into main.  The pipeline result is reported automatically by the
-//   GitHub plugin (or Jenkins GitHub Checks plugin).
-//
-// Requirements
-//   Jenkins agent with Python 3.12, Docker, and network access to REGISTRY and MLFLOW_URI.
-
 pipeline {
     agent any
 
@@ -42,8 +18,6 @@ pipeline {
         PYTHONUNBUFFERED   = "1"
         IMAGE_NAME         = "image-classifier"
         IMAGE_TAG          = "${env.GIT_COMMIT?.take(8) ?: 'latest'}"
-        // Override DOCKER_REGISTRY / MLFLOW_URI in Jenkins → Manage Jenkins → Configure System
-        // if your cluster addresses differ from the AAU defaults below.
         REGISTRY           = "${env.DOCKER_REGISTRY ?: '172.24.198.42:5000'}"
         MLFLOW_TRACKING_URI = "${env.MLFLOW_URI ?: 'http://172.24.198.42:5050'}"
         MIN_ACCURACY       = "0.80"
@@ -51,7 +25,6 @@ pipeline {
     }
 
     stages {
-        // ── 1. Checkout ─────────────────────────────────────────────────────────
         stage('Checkout') {
             steps {
                 checkout scm
@@ -59,7 +32,6 @@ pipeline {
             }
         }
 
-        // ── 2. Setup ────────────────────────────────────────────────────────────
         stage('Setup') {
             steps {
                 sh '''
@@ -71,7 +43,6 @@ pipeline {
             }
         }
 
-        // ── 3. Lint ─────────────────────────────────────────────────────────────
         stage('Lint') {
             steps {
                 sh 'ruff check src/ tests/ train.py train_amp.py evaluate.py inference.py compress.py batch_inference.py scripts/'
@@ -79,7 +50,6 @@ pipeline {
             }
         }
 
-        // ── 4. Test ─────────────────────────────────────────────────────────────
         stage('Test') {
             steps {
                 sh 'pytest tests/ -v --tb=short --junitxml=test-results.xml --cov=src --cov-report=xml'
@@ -92,7 +62,6 @@ pipeline {
             }
         }
 
-        // ── 5. Validate Structure ────────────────────────────────────────────────
         stage('Validate Structure') {
             steps {
                 sh '''
@@ -116,9 +85,6 @@ for f in ['configs/base.yaml','configs/data.yaml','configs/model.yaml','configs/
             }
         }
 
-        // ── 6. Docker Build ──────────────────────────────────────────────────────
-        // Build a thin layer on top of the base image; tag with the git commit hash
-        // so the exact environment is reproducible years from now.
         stage('Docker Build') {
             steps {
                 sh "docker build -t ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} -t ${REGISTRY}/${IMAGE_NAME}:latest ."
@@ -126,8 +92,6 @@ for f in ['configs/base.yaml','configs/data.yaml','configs/model.yaml','configs/
             }
         }
 
-        // ── 7. Docker Push ───────────────────────────────────────────────────────
-        // Push both the commit-hash tag (immutable lineage) and :latest (convenience).
         stage('Docker Push') {
             steps {
                 sh "docker push ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
@@ -136,9 +100,6 @@ for f in ['configs/base.yaml','configs/data.yaml','configs/model.yaml','configs/
             }
         }
 
-        // ── 8. Train ─────────────────────────────────────────────────────────────
-        // USE_AMP=true  → train_amp.py (FP16 AMP, falls back to FP32 on CPU)
-        // USE_AMP=false → train.py     (standard FP32 Trainer)
         stage('Train') {
             options { timeout(time: 60, unit: 'MINUTES') }
             steps {
@@ -158,9 +119,6 @@ for f in ['configs/base.yaml','configs/data.yaml','configs/model.yaml','configs/
             }
         }
 
-        // ── 9. Evaluate ──────────────────────────────────────────────────────────
-        // Evaluate on the test split.  Exit code 1 (from --min-accuracy) fails the
-        // stage immediately, preventing registration and deployment of a bad model.
         stage('Evaluate') {
             steps {
                 sh """
@@ -174,11 +132,6 @@ for f in ['configs/base.yaml','configs/data.yaml','configs/model.yaml','configs/
             }
         }
 
-        // ── 10. Compress ─────────────────────────────────────────────────────────
-        // Apply dynamic INT8 quantization to the trained model, benchmark latency
-        // and throughput vs. the baseline, and log the results to MLflow.
-        // The compression report is archived as a Jenkins artifact.
-        // Set SKIP_COMPRESS=true to bypass this stage (e.g. when testing AMP only).
         stage('Compress') {
             when {
                 not { expression { params.SKIP_COMPRESS } }
@@ -200,9 +153,6 @@ for f in ['configs/base.yaml','configs/data.yaml','configs/model.yaml','configs/
             }
         }
 
-        // ── 11. Register Model ───────────────────────────────────────────────────
-        // Register the trained model artifact to the MLflow Model Registry and
-        // move it to Staging.  Uses the run ID written by train.py.
         stage('Register Model') {
             steps {
                 sh """
@@ -215,9 +165,6 @@ for f in ['configs/base.yaml','configs/data.yaml','configs/model.yaml','configs/
             }
         }
 
-        // ── 12. Deploy ───────────────────────────────────────────────────────────
-        // Promote the Staging model to Production and log the deployment event back
-        // to the training MLflow run.  Only runs on the main branch.
         stage('Deploy') {
             when {
                 branch 'main'

@@ -1,23 +1,3 @@
-"""Model compression entry point.
-
-Usage::
-
-    # Dynamic INT8 quantization + benchmark
-    python compress.py --method dynamic_quant
-
-    # Prune 30% of weights, save pruned model
-    python compress.py --method prune --prune-amount 0.3
-
-    # Prune 50%, then fine-tune to recover accuracy
-    python compress.py --method prune --prune-amount 0.5 --finetune
-
-    # Sweep pruning amounts (reports accuracy at each level)
-    python compress.py --method prune_sweep
-
-    # Baseline benchmark only (no compression)
-    python compress.py --method none
-"""
-
 from __future__ import annotations
 
 import argparse
@@ -29,9 +9,6 @@ from pathlib import Path
 
 import mlflow
 import torch
-from torch.utils.data import DataLoader
-from transformers import AutoImageProcessor, AutoModelForImageClassification, Trainer, TrainingArguments
-
 from src.compress import (
     apply_dynamic_quantization,
     apply_pruning,
@@ -43,6 +20,13 @@ from src.config import load_config
 from src.data import collate_fn, load_image_dataset, preprocess_dataset
 from src.train import compute_metrics
 from src.utils import set_seed, setup_logging
+from torch.utils.data import DataLoader
+from transformers import (
+    AutoImageProcessor,
+    AutoModelForImageClassification,
+    Trainer,
+    TrainingArguments,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -149,7 +133,9 @@ def _finetune(
     trainer.train()
 
 
-def _save_model(model: torch.nn.Module, processor: AutoImageProcessor, src_dir: Path, dst_dir: Path) -> None:
+def _save_model(
+    model: torch.nn.Module, processor: AutoImageProcessor, src_dir: Path, dst_dir: Path
+) -> None:
     """Save model + processor to *dst_dir*, copying config files from *src_dir*."""
     dst_dir.mkdir(parents=True, exist_ok=True)
     model.save_pretrained(dst_dir)
@@ -193,12 +179,18 @@ def _log_to_mlflow(report: dict, model_dir: str) -> None:
                     if isinstance(v, (int, float)):
                         mlflow.log_metric(f"finetuned_{k}", float(v))
 
-            mlflow.log_params({
-                "compression_method": method,
-                "prune_amount": report.get("compressed", {}).get("pruned_amount", "n/a"),
-            })
+            mlflow.log_params(
+                {
+                    "compression_method": method,
+                    "prune_amount": report.get("compressed", {}).get("pruned_amount", "n/a"),
+                }
+            )
 
-            logger.info("Compression results logged as child run %s under %s", child.info.run_id, parent_run_id)
+            logger.info(
+                "Compression results logged as child run %s under %s",
+                child.info.run_id,
+                parent_run_id,
+            )
 
 
 def main() -> None:
@@ -209,7 +201,11 @@ def main() -> None:
 
     device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
     model_dir = Path(args.model_dir)
-    output_dir = Path(args.output_dir) if args.output_dir else model_dir.parent / (model_dir.name + "_compressed")
+    output_dir = (
+        Path(args.output_dir)
+        if args.output_dir
+        else model_dir.parent / (model_dir.name + "_compressed")
+    )
     batch_size = cfg.get("training", {}).get("per_device_eval_batch_size", 32)
 
     logger.info("Loading model from '%s' …", model_dir)

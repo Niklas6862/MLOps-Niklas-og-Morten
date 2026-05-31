@@ -1,20 +1,3 @@
-"""Batch inference entry point.
-
-Usage::
-
-    # Classify all images in a directory
-    python batch_inference.py --image-dir path/to/images/
-
-    # Run on the test split and measure accuracy
-    python batch_inference.py --dataset-split test
-
-    # Apply dynamic INT8 quantization before inference
-    python batch_inference.py --dataset-split test --quantized
-
-    # Save full predictions to JSON
-    python batch_inference.py --dataset-split test --output predictions.json
-"""
-
 from __future__ import annotations
 
 import argparse
@@ -25,13 +8,12 @@ from pathlib import Path
 
 import torch
 from PIL import Image
-from torch.utils.data import DataLoader, Dataset
-from transformers import AutoImageProcessor, AutoModelForImageClassification
-
 from src.compress import apply_dynamic_quantization
 from src.config import load_config
 from src.data import collate_fn, load_image_dataset, preprocess_dataset
 from src.utils import setup_logging
+from torch.utils.data import DataLoader, Dataset
+from transformers import AutoImageProcessor, AutoModelForImageClassification
 
 logger = logging.getLogger(__name__)
 

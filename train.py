@@ -1,19 +1,3 @@
-"""Training entry point.
-
-Usage::
-
-    python train.py
-    python train.py --config configs/base.yaml configs/data.yaml configs/model.yaml configs/training.yaml
-
-The script loads all YAML configs, sets up MLflow experiment tracking, preprocesses
-the dataset, and launches a HuggingFace Trainer run.  After training it logs:
-
-- Lineage tags (git commit, Docker image, Jenkins build number)
-- Model artifact (transformers flavor, enabling model registry)
-- Model card YAML summarising provenance and train metrics
-- ``models/artifacts/run_id.txt`` so downstream pipeline stages can resume the run
-"""
-
 from __future__ import annotations
 
 import argparse

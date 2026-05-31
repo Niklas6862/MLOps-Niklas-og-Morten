@@ -1,11 +1,3 @@
-"""AMP training entry point — single GPU with Automatic Mixed Precision.
-
-Usage::
-
-    python train_amp.py
-    python train_amp.py --config configs/base.yaml configs/data.yaml configs/model.yaml configs/training.yaml
-"""
-
 from __future__ import annotations
 
 import argparse
