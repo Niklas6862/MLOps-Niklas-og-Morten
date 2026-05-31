@@ -1,18 +1,3 @@
-"""Evaluation entry point.
-
-Usage::
-
-    python evaluate.py
-    python evaluate.py --model-dir models/artifacts --split test --output models/artifacts/eval_results.json
-
-Loads a fine-tuned model from disk, runs it over a dataset split, and saves
-detailed per-class metrics to JSON.
-
-Note: this file is named ``evaluate.py`` intentionally as a CLI entry point.
-All imports from the ``src`` package use ``src.eval`` to avoid shadowing any
-installed package named ``evaluate``.
-"""
-
 from __future__ import annotations
 
 import argparse
