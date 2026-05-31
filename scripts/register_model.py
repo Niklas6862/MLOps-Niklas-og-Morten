@@ -45,7 +45,9 @@ def main() -> None:
     result = mlflow.register_model(model_uri=model_uri, name=MODEL_NAME)
 
     if result is None or result.version is None:
-        logger.error("mlflow.register_model returned no version — model URI may be wrong: %s", model_uri)
+        logger.error(
+            "mlflow.register_model returned no version — model URI may be wrong: %s", model_uri
+        )
         sys.exit(1)
 
     version = str(result.version)
@@ -58,7 +60,9 @@ def main() -> None:
         client.set_registered_model_alias(name=MODEL_NAME, alias="staging", version=version)
         logger.info("Model version %s aliased as 'staging'.", version)
     except Exception as exc:
-        logger.warning("set_registered_model_alias failed (%s), falling back to stage transition.", exc)
+        logger.warning(
+            "set_registered_model_alias failed (%s), falling back to stage transition.", exc
+        )
         client.transition_model_version_stage(
             name=MODEL_NAME,
             version=version,
