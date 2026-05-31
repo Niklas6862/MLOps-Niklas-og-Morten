@@ -147,9 +147,10 @@ def _save_model(
     logger.info("Compressed model saved to %s", dst_dir)
 
 
-def _log_to_mlflow(report: dict, model_dir: str) -> None:
+def _log_to_mlflow(report: dict, model_dir: str, experiment_name: str) -> None:
     tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "mlruns")
     mlflow.set_tracking_uri(tracking_uri)
+    mlflow.set_experiment(experiment_name)
 
     run_id_file = Path(model_dir) / "run_id.txt"
     parent_run_id = run_id_file.read_text().strip() if run_id_file.exists() else None
@@ -190,6 +191,7 @@ def main() -> None:
     setup_logging(cfg.get("project", {}).get("log_level", "INFO"))
     set_seed(cfg.get("project", {}).get("seed", 42))
 
+    experiment_name = cfg.get("project", {}).get("experiment_name", "image-classifier")
     device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
     model_dir = Path(args.model_dir)
     output_dir = (
@@ -226,7 +228,7 @@ def main() -> None:
 
     # ── Benchmark only ─────────────────────────────────────────────────────────
     if args.method == "none":
-        _finalize(report, args.output, args.model_dir)
+        _finalize(report, args.output, args.model_dir, experiment_name)
         return
 
     # ── Pruning sweep ──────────────────────────────────────────────────────────
@@ -242,7 +244,7 @@ def main() -> None:
             logger.info("amount=%.0f%%  acc=%.4f  Δacc=%.4f", amount * 100, acc, acc - base_acc)
             del m
         report["prune_sweep"] = sweep
-        _finalize(report, args.output, args.model_dir)
+        _finalize(report, args.output, args.model_dir, experiment_name)
         return
 
     # ── Single compression run ─────────────────────────────────────────────────
@@ -301,16 +303,16 @@ def main() -> None:
         f"  speedup={speedup:.2f}x" if speedup else "",
     )
 
-    _finalize(report, args.output, args.model_dir)
+    _finalize(report, args.output, args.model_dir, experiment_name)
 
 
-def _finalize(report: dict, output_path: str, model_dir: str) -> None:
+def _finalize(report: dict, output_path: str, model_dir: str, experiment_name: str) -> None:
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as f:
         json.dump(report, f, indent=2)
     logger.info("Compression report saved to %s", path)
-    _log_to_mlflow(report, model_dir)
+    _log_to_mlflow(report, model_dir, experiment_name)
 
 
 if __name__ == "__main__":
