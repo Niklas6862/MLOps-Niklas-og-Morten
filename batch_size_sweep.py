@@ -36,7 +36,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--config", nargs="+", default=DEFAULT_CONFIGS)
     parser.add_argument("--model-dir", default="models/artifacts")
     parser.add_argument("--batch-sizes", nargs="+", type=int, default=DEFAULT_BATCH_SIZES)
-    parser.add_argument("--quantized", action="store_true", help="Apply dynamic INT8 quantization (forces CPU)")
+    parser.add_argument(
+        "--quantized", action="store_true", help="Apply dynamic INT8 quantization (forces CPU)"
+    )
     parser.add_argument("--device", default=None)
     parser.add_argument("--output", default="models/artifacts/batch_sweep_report.json")
     parser.add_argument("--plot", default="models/artifacts/batch_sweep_plot.png")
@@ -162,12 +164,14 @@ def main() -> None:
     parent_run_id = run_id_file.read_text().strip() if run_id_file.exists() else None
 
     with mlflow.start_run(run_name="batch-size-sweep") as run:
-        mlflow.set_tags({
-            "run_type": "batch_sweep",
-            "device": device,
-            "quantized": str(args.quantized),
-            **({"training_run_id": parent_run_id} if parent_run_id else {}),
-        })
+        mlflow.set_tags(
+            {
+                "run_type": "batch_sweep",
+                "device": device,
+                "quantized": str(args.quantized),
+                **({"training_run_id": parent_run_id} if parent_run_id else {}),
+            }
+        )
         for entry in results:
             bs = entry["batch_size"]
             mlflow.log_metric("throughput_fps", entry["throughput_fps"], step=bs)

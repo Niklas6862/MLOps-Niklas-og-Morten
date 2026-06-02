@@ -13,7 +13,9 @@ logger = logging.getLogger(__name__)
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Plot pruning degree vs accuracy from a sweep report")
+    parser = argparse.ArgumentParser(
+        description="Plot pruning degree vs accuracy from a sweep report"
+    )
     parser.add_argument("--report", default="models/artifacts/pruning_report.json")
     parser.add_argument("--output", default="models/artifacts/pruning_curve.png")
     parser.add_argument("--experiment", default="image-classifier")

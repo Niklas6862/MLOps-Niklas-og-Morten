@@ -29,7 +29,9 @@ SWEEP_AMOUNTS = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Apply L1-unstructured magnitude pruning to a trained model")
+    parser = argparse.ArgumentParser(
+        description="Apply L1-unstructured magnitude pruning to a trained model"
+    )
     parser.add_argument("--config", nargs="+", default=DEFAULT_CONFIGS)
     parser.add_argument("--model-dir", default="models/artifacts")
     parser.add_argument("--output-dir", default=None, help="Where to save the pruned model")
@@ -55,7 +57,9 @@ def _make_test_loader(cfg: dict, processor: AutoImageProcessor, batch_size: int)
     raw = load_image_dataset(cfg["dataset"])
     processed = preprocess_dataset(raw, processor, cfg["dataset"])
     processed.set_format("torch", columns=["pixel_values", "labels"])
-    return DataLoader(processed["test"], batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
+    return DataLoader(
+        processed["test"], batch_size=batch_size, shuffle=False, collate_fn=collate_fn
+    )
 
 
 def main() -> None:
@@ -67,7 +71,9 @@ def main() -> None:
     device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
     model_dir = Path(args.model_dir)
     output_dir = (
-        Path(args.output_dir) if args.output_dir else model_dir.parent / (model_dir.name + "_pruned")
+        Path(args.output_dir)
+        if args.output_dir
+        else model_dir.parent / (model_dir.name + "_pruned")
     )
 
     processor = AutoImageProcessor.from_pretrained(model_dir)
@@ -83,7 +89,9 @@ def main() -> None:
     base_model = _fresh_model()
     base_acc = evaluate_accuracy(base_model, test_loader, device)
     base_lat = benchmark(base_model, test_loader, device, n_batches=args.benchmark_batches)
-    logger.info("Baseline: acc=%.4f  throughput=%.1f fps", base_acc, base_lat.get("throughput_fps", 0))
+    logger.info(
+        "Baseline: acc=%.4f  throughput=%.1f fps", base_acc, base_lat.get("throughput_fps", 0)
+    )
     del base_model
 
     report: dict = {
@@ -98,7 +106,12 @@ def main() -> None:
             stats = apply_pruning(m, amount)
             make_pruning_permanent(m)
             acc = evaluate_accuracy(m, test_loader, device)
-            entry = {"prune_amount": amount, "accuracy": round(acc, 4), "accuracy_drop": round(base_acc - acc, 4), **stats}
+            entry = {
+                "prune_amount": amount,
+                "accuracy": round(acc, 4),
+                "accuracy_drop": round(base_acc - acc, 4),
+                **stats,
+            }
             sweep.append(entry)
             logger.info("amount=%.0f%%  acc=%.4f  drop=%.4f", amount * 100, acc, base_acc - acc)
             del m
