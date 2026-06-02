@@ -32,9 +32,7 @@ DEFAULT_CONFIGS = [
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Fine-tune a pruned model to recover accuracy"
-    )
+    parser = argparse.ArgumentParser(description="Fine-tune a pruned model to recover accuracy")
     parser.add_argument("--config", nargs="+", default=DEFAULT_CONFIGS)
     parser.add_argument(
         "--model-dir",
@@ -72,13 +70,18 @@ def main() -> None:
 
     batch_size = cfg.get("training", {}).get("per_device_eval_batch_size", 32)
     from torch.utils.data import DataLoader
-    test_loader = DataLoader(processed["test"], batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
+
+    test_loader = DataLoader(
+        processed["test"], batch_size=batch_size, shuffle=False, collate_fn=collate_fn
+    )
 
     model.eval()
     logger.info("Evaluating pruned model before fine-tuning …")
     pre_acc = evaluate_accuracy(model, test_loader, device)
     pre_lat = benchmark(model, test_loader, device, n_batches=args.benchmark_batches)
-    logger.info("Pre-finetune: acc=%.4f  throughput=%.1f fps", pre_acc, pre_lat.get("throughput_fps", 0))
+    logger.info(
+        "Pre-finetune: acc=%.4f  throughput=%.1f fps", pre_acc, pre_lat.get("throughput_fps", 0)
+    )
 
     training_cfg = cfg.get("training", {})
     ft_args = TrainingArguments(
