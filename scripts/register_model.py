@@ -19,7 +19,7 @@ DEFAULT_CONFIGS = [
     "configs/training.yaml",
 ]
 MODEL_DIR = Path("models/artifacts")
-MODEL_NAME = "image-classifier"
+MODEL_NAME = "image-classifier-dvml-2"
 
 
 def main() -> None:
