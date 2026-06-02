@@ -44,8 +44,8 @@
 
 | Hyperparameter | Value |
 |---|---|
-| Epochs | 3 |
-| Learning rate | 2e-5 (AdamW) |
+| Epochs | 10 |
+| Learning rate | 2e-5 |
 | Weight decay | 0.01 |
 | Warmup ratio | 0.1 |
 | Train batch size | 16 |
@@ -61,12 +61,11 @@ Experiments were tracked with MLflow. All hyperparameters are defined in `config
 
 | Metric | Value |
 |---|---|
-| Overall accuracy (test) | _TBD_ |
-| angular\_leaf\_spot — F1 | _TBD_ |
-| bean\_rust — F1 | _TBD_ |
-| healthy — F1 | _TBD_ |
+| Overall accuracy (test) | 0.9688 |
+| angular\_leaf\_spot — F1 | 0.9639 |
+| bean\_rust — F1 | 0.9556 |
+| healthy — F1 | 0.988 |
 
-Minimum accepted accuracy threshold for deployment: **0.80** (enforced in the Jenkins pipeline).
 
 ---
 
@@ -92,5 +91,5 @@ Incorrect predictions may cause farmers to misapply or withhold treatment, with 
 | Containerisation | Docker (multi-stage build) |
 | Registry | Private Docker registry (`172.24.198.42:5000`) |
 | Experiment tracking | MLflow (`http://172.24.198.42:5050`) |
-| CI/CD | Jenkins (lint → test → build → train → evaluate → register → deploy) |
+| CI/CD | Jenkins (lint → test → build → train → evaluate → register|
 | Dependency management | `uv` + `pyproject.toml` |
