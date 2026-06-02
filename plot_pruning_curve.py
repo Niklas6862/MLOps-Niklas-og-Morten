@@ -60,7 +60,7 @@ def main() -> None:
 
     with mlflow.start_run(run_name="pruning-curve-plot") as run:
         mlflow.set_tag("run_type", "pruning_analysis")
-        for amount, acc, drop in zip(amounts, accuracies, drops):
+        for amount, acc, drop in zip(amounts, accuracies, drops):  # noqa: B905
             step = int(amount * 100)
             mlflow.log_metric("pruned_accuracy", acc, step=step)
             mlflow.log_metric("accuracy_drop", drop, step=step)
