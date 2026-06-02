@@ -91,5 +91,5 @@ Incorrect predictions may cause farmers to misapply or withhold treatment, with 
 | Containerisation | Docker (multi-stage build) |
 | Registry | Private Docker registry (`172.24.198.42:5000`) |
 | Experiment tracking | MLflow (`http://172.24.198.42:5050`) |
-| CI/CD | Jenkins (lint → test → build → train → evaluate → register → deploy) |
+| CI/CD | Jenkins (lint → test → build → train → evaluate → register|
 | Dependency management | `uv` + `pyproject.toml` |
