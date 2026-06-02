@@ -1,4 +1,5 @@
 """Export MLflow runs to SQLite so Grafana can visualise them."""
+
 from __future__ import annotations
 
 import argparse
@@ -90,11 +91,13 @@ def export(mlflow_uri: str, db_path: str) -> None:
             run_name = _get(row, "tags.mlflow.runName") or run_id[:8]
             start_time = _ts(row)
 
-            if training_strategy == "FP32":
+            if training_strategy:
                 conn.execute(
                     "INSERT OR REPLACE INTO training_metrics VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     (
-                        run_id, run_name, start_time,
+                        run_id,
+                        run_name,
+                        start_time,
                         _get(row, "params.model_name"),
                         _get(row, "params.dataset"),
                         _get(row, "params.num_epochs", int),
@@ -112,7 +115,9 @@ def export(mlflow_uri: str, db_path: str) -> None:
                 conn.execute(
                     "INSERT OR REPLACE INTO drift_metrics VALUES (?,?,?,?,?,?,?,?,?,?)",
                     (
-                        run_id, run_name, start_time,
+                        run_id,
+                        run_name,
+                        start_time,
                         _get(row, "tags.artificial_shift"),
                         _get(row, "metrics.data_drift_fraction"),
                         _get(row, "metrics.data_drift_detected", int),
@@ -126,19 +131,39 @@ def export(mlflow_uri: str, db_path: str) -> None:
             elif run_type in ("compression", "pruning", "finetune_pruned"):
                 # pruning.py logs "pruned_*", compress.py logs "compressed_*"
                 acc = _get(row, "metrics.compressed_accuracy") or _get(row, "metrics.post_accuracy")
-                drop = _get(row, "metrics.compressed_accuracy_drop") or _get(row, "metrics.pruned_accuracy_drop")
-                fps_base = _get(row, "metrics.baseline_throughput_fps") or _get(row, "metrics.pre_throughput_fps")
-                fps_comp = _get(row, "metrics.compressed_throughput_fps") or _get(row, "metrics.post_throughput_fps") or _get(row, "metrics.pruned_throughput_fps")
-                speedup = _get(row, "metrics.compressed_speedup_x") or _get(row, "metrics.pruned_speedup_x")
-                sparsity = _get(row, "metrics.compressed_actual_sparsity") or _get(row, "metrics.pruned_actual_sparsity")
+                drop = _get(row, "metrics.compressed_accuracy_drop") or _get(
+                    row, "metrics.pruned_accuracy_drop"
+                )
+                fps_base = _get(row, "metrics.baseline_throughput_fps") or _get(
+                    row, "metrics.pre_throughput_fps"
+                )
+                fps_comp = (
+                    _get(row, "metrics.compressed_throughput_fps")
+                    or _get(row, "metrics.post_throughput_fps")
+                    or _get(row, "metrics.pruned_throughput_fps")
+                )
+                speedup = _get(row, "metrics.compressed_speedup_x") or _get(
+                    row, "metrics.pruned_speedup_x"
+                )
+                sparsity = _get(row, "metrics.compressed_actual_sparsity") or _get(
+                    row, "metrics.pruned_actual_sparsity"
+                )
                 method = _get(row, "tags.compression_method") or run_type
 
                 conn.execute(
                     "INSERT OR REPLACE INTO compression_metrics VALUES (?,?,?,?,?,?,?,?,?,?,?)",
                     (
-                        run_id, run_name, start_time, method,
+                        run_id,
+                        run_name,
+                        start_time,
+                        method,
                         _get(row, "metrics.baseline_accuracy"),
-                        acc, drop, fps_base, fps_comp, speedup, sparsity,
+                        acc,
+                        drop,
+                        fps_base,
+                        fps_comp,
+                        speedup,
+                        sparsity,
                     ),
                 )
 
