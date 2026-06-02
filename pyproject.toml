@@ -17,6 +17,7 @@ dependencies = [
     "scikit-learn>=1.4.0",
     "scipy>=1.13.0",
     "carbontracker>=1.1.6",
+    "matplotlib>=3.8.0",
 ]
 
 [project.optional-dependencies]
