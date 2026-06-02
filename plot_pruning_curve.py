@@ -8,22 +8,31 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import mlflow
+from src.config import load_config
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_CONFIGS = [
+    "configs/base.yaml",
+    "configs/data.yaml",
+    "configs/model.yaml",
+    "configs/training.yaml",
+]
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Plot pruning degree vs accuracy from a sweep report"
     )
+    parser.add_argument("--config", nargs="+", default=DEFAULT_CONFIGS)
     parser.add_argument("--report", default="models/artifacts/pruning_report.json")
     parser.add_argument("--output", default="models/artifacts/pruning_curve.png")
-    parser.add_argument("--experiment", default="image-classifier")
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
+    cfg = load_config(*args.config)
 
     with open(args.report) as f:
         report = json.load(f)
@@ -54,9 +63,10 @@ def main() -> None:
     plt.close(fig)
     logger.info("Pruning curve saved to %s", args.output)
 
+    experiment_name = cfg.get("project", {}).get("experiment_name", "image-classifier")
     tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "mlruns")
     mlflow.set_tracking_uri(tracking_uri)
-    mlflow.set_experiment(args.experiment)
+    mlflow.set_experiment(experiment_name)
 
     with mlflow.start_run(run_name="pruning-curve-plot") as run:
         mlflow.set_tag("run_type", "pruning_analysis")

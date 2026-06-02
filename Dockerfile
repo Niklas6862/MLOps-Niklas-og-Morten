@@ -18,7 +18,8 @@ RUN uv venv .venv && \
     numpy \
     scikit-learn \
     scipy \
-    carbontracker
+    carbontracker \
+    matplotlib
 
 FROM python:3.12-slim AS runtime
 
@@ -38,7 +39,8 @@ ENV PATH="/app/.venv/bin:$PATH" \
 COPY configs/  ./configs/
 COPY src/       ./src/
 COPY scripts/  ./scripts/
-COPY train.py train_amp.py evaluate.py inference.py compress.py batch_inference.py detect_drift.py ./
+COPY train.py train_amp.py evaluate.py inference.py compress.py batch_inference.py detect_drift.py \
+    pruning.py finetune_pruned.py batch_size_sweep.py plot_pruning_curve.py ./
 
 RUN mkdir -p data/raw data/processed models/artifacts models/hf_cache mlruns
 
