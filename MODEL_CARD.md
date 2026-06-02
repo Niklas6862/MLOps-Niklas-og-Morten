@@ -45,7 +45,7 @@
 | Hyperparameter | Value |
 |---|---|
 | Epochs | 10 |
-| Learning rate | 2e-5 |
+| Learning rate | 2e-4 |
 | Weight decay | 0.01 |
 | Warmup ratio | 0.1 |
 | Train batch size | 16 |

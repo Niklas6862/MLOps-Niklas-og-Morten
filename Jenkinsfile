@@ -10,7 +10,7 @@ pipeline {
         booleanParam(
             name: 'SKIP_COMPRESS',
             defaultValue: false,
-            description: 'Skip the Compress stage (useful when testing AMP training only).'
+            description: 'Skip the Compress stage and all D4 compression/pruning stages.'
         )
     }
 
@@ -46,8 +46,8 @@ pipeline {
 
         stage('Lint') {
             steps {
-                sh 'ruff check src/ tests/ train.py train_amp.py evaluate.py inference.py compress.py batch_inference.py detect_drift.py scripts/'
-                sh 'ruff format --check src/ tests/ train.py train_amp.py evaluate.py inference.py compress.py batch_inference.py detect_drift.py scripts/'
+                sh 'ruff check src/ tests/ train.py train_amp.py evaluate.py inference.py compress.py batch_inference.py detect_drift.py pruning.py finetune_pruned.py batch_size_sweep.py plot_pruning_curve.py scripts/'
+                sh 'ruff format --check src/ tests/ train.py train_amp.py evaluate.py inference.py compress.py batch_inference.py detect_drift.py pruning.py finetune_pruned.py batch_size_sweep.py plot_pruning_curve.py scripts/'
             }
         }
 
@@ -68,8 +68,10 @@ pipeline {
                 sh '''
                     set -e
                     for f in train.py evaluate.py inference.py compress.py batch_inference.py detect_drift.py \
+                              pruning.py finetune_pruned.py batch_size_sweep.py plot_pruning_curve.py \
                               pyproject.toml Dockerfile \
-                              scripts/register_model.py scripts/log_deploy.py scripts/compress.sh; do
+                              scripts/register_model.py scripts/log_deploy.py scripts/compress.sh \
+                              scripts/pruning_sweep.sh scripts/batch_sweep.sh scripts/finetune_pruned.sh; do
                         test -f "$f" || { echo "ERROR: missing $f"; exit 1; }
                     done
                     for d in src configs tests scripts; do
@@ -172,6 +174,123 @@ for f in ['configs/base.yaml','configs/data.yaml','configs/model.yaml','configs/
             post {
                 always {
                     archiveArtifacts artifacts: 'models/artifacts/compression_report.json', allowEmptyArchive: true
+                }
+            }
+        }
+
+        stage('Dynamic Quantization') {
+            // D4.1 — dynamic INT8 quantization speedup and accuracy
+            when {
+                not { expression { params.SKIP_COMPRESS } }
+            }
+            steps {
+                sh """
+                    docker run --rm \\
+                        -v \${WORKSPACE}/models:/app/models \\
+                        -v \${WORKSPACE}/data:/app/data \\
+                        -e MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI} \\
+                        ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} \\
+                        python compress.py --method dynamic_quant \\
+                            --output models/artifacts/quant_report.json
+                """
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'models/artifacts/quant_report.json', allowEmptyArchive: true
+                }
+            }
+        }
+
+        stage('Pruning Sweep') {
+            // D4.3 — sweep pruning amounts 10-90%, record accuracy at each level
+            when {
+                not { expression { params.SKIP_COMPRESS } }
+            }
+            options { timeout(time: 30, unit: 'MINUTES') }
+            steps {
+                sh """
+                    docker run --rm \\
+                        -v \${WORKSPACE}/models:/app/models \\
+                        -v \${WORKSPACE}/data:/app/data \\
+                        -e MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI} \\
+                        ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} \\
+                        python pruning.py --sweep \\
+                            --output models/artifacts/pruning_report.json
+                """
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'models/artifacts/pruning_report.json', allowEmptyArchive: true
+                }
+            }
+        }
+
+        stage('Batch Size Sweep') {
+            // D4.2 — measure throughput and latency across batch sizes 1-64
+            options { timeout(time: 20, unit: 'MINUTES') }
+            steps {
+                sh """
+                    docker run --rm \\
+                        -v \${WORKSPACE}/models:/app/models \\
+                        -v \${WORKSPACE}/data:/app/data \\
+                        -e MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI} \\
+                        ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} \\
+                        python batch_size_sweep.py \\
+                            --output models/artifacts/batch_sweep_report.json \\
+                            --plot models/artifacts/batch_sweep_plot.png
+                """
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'models/artifacts/batch_sweep_report.json,models/artifacts/batch_sweep_plot.png', allowEmptyArchive: true
+                }
+            }
+        }
+
+        stage('Fine-tune Pruned') {
+            // D4.4 — fine-tune the pruned model and measure accuracy recovery
+            when {
+                not { expression { params.SKIP_COMPRESS } }
+            }
+            options { timeout(time: 30, unit: 'MINUTES') }
+            steps {
+                sh """
+                    docker run --rm \\
+                        -v \${WORKSPACE}/models:/app/models \\
+                        -v \${WORKSPACE}/data:/app/data \\
+                        -e MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI} \\
+                        ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} \\
+                        python finetune_pruned.py \\
+                            --model-dir models/artifacts_compressed \\
+                            --output models/artifacts/finetune_pruned_report.json
+                """
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'models/artifacts/finetune_pruned_report.json', allowEmptyArchive: true
+                }
+            }
+        }
+
+        stage('Plot Reports') {
+            // D4.2 + D4.3 — generate pruning curve plot and log all artifacts to MLflow
+            when {
+                not { expression { params.SKIP_COMPRESS } }
+            }
+            steps {
+                sh """
+                    docker run --rm \\
+                        -v \${WORKSPACE}/models:/app/models \\
+                        -e MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI} \\
+                        ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} \\
+                        python plot_pruning_curve.py \\
+                            --report models/artifacts/pruning_report.json \\
+                            --output models/artifacts/pruning_curve.png
+                """
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'models/artifacts/pruning_curve.png', allowEmptyArchive: true
                 }
             }
         }
