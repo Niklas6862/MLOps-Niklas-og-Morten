@@ -1,4 +1,5 @@
 """Seed mlruns with realistic fake data so the Grafana dashboard panels populate."""
+
 import mlflow
 
 mlflow.set_tracking_uri("mlruns")

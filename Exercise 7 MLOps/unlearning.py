@@ -186,7 +186,9 @@ def report_scores(before: list[float], after: list[float], forget_digit: int) ->
     print("-" * 54)
     for digit, (old_score, new_score) in enumerate(zip(before, after)):
         marker = "  <-- target" if digit == forget_digit else ""
-        print(f"  {digit:<6} {old_score:>9.3f} {new_score:>9.3f} {new_score - old_score:>+9.3f}{marker}")
+        print(
+            f"  {digit:<6} {old_score:>9.3f} {new_score:>9.3f} {new_score - old_score:>+9.3f}{marker}"
+        )
 
     retained_before = sum(score for digit, score in enumerate(before) if digit != forget_digit) / 9
     retained_after = sum(score for digit, score in enumerate(after) if digit != forget_digit) / 9
