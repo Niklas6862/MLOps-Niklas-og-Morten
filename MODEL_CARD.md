@@ -8,9 +8,6 @@ tags:
   - plant-disease
 datasets:
   - AI-Lab-Makerere/beans
-metrics:
-  - accuracy
-  - f1
 base_model: google/vit-base-patch16-224
 pipeline_tag: image-classification
 ---
@@ -79,9 +76,9 @@ Experiments were tracked with MLflow. All hyperparameters are defined in `config
 | Metric | Value |
 |---|---|
 | Overall accuracy (test) | 0.9688 |
-| angular\_leaf\_spot — F1 | 0.9639 |
-| bean\_rust — F1 | 0.9556 |
-| healthy — F1 | 0.988 |
+| angular\_leaf\_spot - F1 | 0.9639 |
+| bean\_rust - F1 | 0.9556 |
+| healthy - F1 | 0.988 |
 
 
 ---
@@ -108,5 +105,5 @@ Incorrect predictions may cause farmers to misapply or withhold treatment, with 
 | Containerisation | Docker (multi-stage build) |
 | Registry | Private Docker registry (`172.24.198.42:5000`) |
 | Experiment tracking | MLflow (`http://172.24.198.42:5050`) |
-| CI/CD | Jenkins (lint → test → build → train → evaluate → register|
+| CI/CD | Jenkins (lint - test - build - train - evaluate - register|
 | Dependency management | `uv` + `pyproject.toml` |
