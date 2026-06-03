@@ -1,0 +1,327 @@
+{
+  "title": "Beans Classifier Monitoring",
+  "uid": "ml-monitoring",
+  "timezone": "browser",
+  "refresh": "5s",
+  "time": { "from": "now-5m", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Request Rate (req/s)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "rate(http_requests_total[1m])",
+          "legendFormat": "{{method}} {{handler}} {{status_code}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "reqps", "color": { "mode": "palette-classic" } }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Inference Latency (ms)",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, rate(inference_latency_seconds_bucket[1m])) * 1000",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, rate(inference_latency_seconds_bucket[1m])) * 1000",
+          "legendFormat": "p95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, rate(inference_latency_seconds_bucket[1m])) * 1000",
+          "legendFormat": "p99"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "ms", "color": { "mode": "palette-classic" } }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Predictions per Bean Class",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "rate(predictions_total{class_name=\"angular_leaf_spot\"}[1m])",
+          "legendFormat": "angular_leaf_spot"
+        },
+        {
+          "expr": "rate(predictions_total{class_name=\"bean_rust\"}[1m])",
+          "legendFormat": "bean_rust"
+        },
+        {
+          "expr": "rate(predictions_total{class_name=\"healthy\"}[1m])",
+          "legendFormat": "healthy"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "reqps", "color": { "mode": "palette-classic" } }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Confidence Score Distribution",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.10, rate(confidence_score_bucket[1m]))",
+          "legendFormat": "p10"
+        },
+        {
+          "expr": "histogram_quantile(0.50, rate(confidence_score_bucket[1m]))",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "histogram_quantile(0.90, rate(confidence_score_bucket[1m]))",
+          "legendFormat": "p90"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "color": { "mode": "palette-classic" }
+        }
+      }
+    },
+    {
+      "id": 9,
+      "title": "Diseased vs Healthy Rate",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(predictions_total{class_name=~\"angular_leaf_spot|bean_rust\"}[1m]))",
+          "legendFormat": "diseased"
+        },
+        {
+          "expr": "rate(predictions_total{class_name=\"healthy\"}[1m])",
+          "legendFormat": "healthy"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "reqps", "color": { "mode": "palette-classic" } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "diseased" }, "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "healthy" }, "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }] }
+        ]
+      },
+      "options": { "fillOpacity": 20 }
+    },
+    {
+      "id": 10,
+      "title": "Drift Detected",
+      "type": "stat",
+      "gridPos": { "x": 12, "y": 16, "w": 4, "h": 8 },
+      "targets": [
+        { "expr": "max(mlops_drift_overall_detected)", "legendFormat": "drift", "instant": true }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "No Drift", "color": "green" }, "1": { "text": "DRIFT!", "color": "red" } } }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      },
+      "options": { "colorMode": "background" }
+    },
+    {
+      "id": 11,
+      "title": "Data Drift Fraction",
+      "type": "gauge",
+      "gridPos": { "x": 16, "y": 16, "w": 4, "h": 8 },
+      "targets": [
+        { "expr": "max(mlops_drift_data_fraction)", "legendFormat": "drift fraction", "instant": true }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.1 },
+              { "color": "red", "value": 0.3 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 12,
+      "title": "Prediction Drift (KL Div)",
+      "type": "stat",
+      "gridPos": { "x": 20, "y": 16, "w": 4, "h": 8 },
+      "targets": [
+        { "expr": "max(mlops_drift_pred_kl_divergence)", "legendFormat": "KL div", "instant": true }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 4,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.05 },
+              { "color": "red", "value": 0.2 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 13,
+      "title": "Best Eval Accuracy",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 24, "w": 6, "h": 4 },
+      "targets": [
+        { "expr": "max(mlops_training_eval_accuracy)", "legendFormat": "accuracy", "instant": true }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 0.8 },
+              { "color": "green", "value": 0.9 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 14,
+      "title": "Model Size",
+      "type": "stat",
+      "gridPos": { "x": 6, "y": 24, "w": 6, "h": 4 },
+      "targets": [
+        { "expr": "max(mlops_training_model_size_mb)", "legendFormat": "size", "instant": true }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "megabytes" }
+      }
+    },
+    {
+      "id": 15,
+      "title": "Training CO2 (g)",
+      "type": "stat",
+      "gridPos": { "x": 12, "y": 24, "w": 6, "h": 4 },
+      "targets": [
+        { "expr": "max(mlops_training_carbon_co2_g)", "legendFormat": "CO2", "instant": true }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 100 },
+              { "color": "red", "value": 1000 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 16,
+      "title": "Compression Speedup",
+      "type": "stat",
+      "gridPos": { "x": 18, "y": 24, "w": 6, "h": 4 },
+      "targets": [
+        { "expr": "max(mlops_compression_speedup_x)", "legendFormat": "speedup", "instant": true }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 2,
+          "displayName": "best speedup (x)"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Total Predictions",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 28, "w": 6, "h": 4 },
+      "targets": [
+        { "expr": "sum(predictions_total)", "legendFormat": "Total" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "id": 6,
+      "title": "Avg Inference Latency (ms)",
+      "type": "stat",
+      "gridPos": { "x": 6, "y": 28, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "expr": "rate(inference_latency_seconds_sum[1m]) / rate(inference_latency_seconds_count[1m]) * 1000",
+          "legendFormat": "avg latency"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ms" } }
+    },
+    {
+      "id": 7,
+      "title": "Avg Confidence Score",
+      "type": "stat",
+      "gridPos": { "x": 12, "y": 28, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "expr": "rate(confidence_score_sum[1m]) / rate(confidence_score_count[1m])",
+          "legendFormat": "avg confidence"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percentunit" } }
+    },
+    {
+      "id": 8,
+      "title": "HTTP Error Rate",
+      "type": "stat",
+      "gridPos": { "x": 18, "y": 28, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{status_code=~\"5..\"}[1m])) / sum(rate(http_requests_total[1m]))",
+          "legendFormat": "error rate"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 0.01 }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

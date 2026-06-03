@@ -11,12 +11,24 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel
 
 CLASS_NAMES = ["angular_leaf_spot", "bean_rust", "healthy"]
+# Disease-skewed distribution reflecting real field conditions
+CLASS_WEIGHTS = [0.40, 0.35, 0.25]
+
+# Realistic ViT-base CPU inference latency range (seconds)
+LATENCY_RANGE = (0.025, 0.085)
+
+# Per-class confidence profiles: healthy is easiest to identify confidently
+CONFIDENCE_PROFILES = {
+    "angular_leaf_spot": (4, 2),
+    "bean_rust": (3, 2),
+    "healthy": (6, 1.5),
+}
 
 PREDICTIONS_TOTAL = Counter("predictions_total", "Number of predictions per class", ["class_name"])
 INFERENCE_LATENCY = Histogram(
     "inference_latency_seconds",
     "Model inference latency in seconds",
-    buckets=[0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0],
+    buckets=[0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2, 0.5],
 )
 CONFIDENCE_SCORE = Histogram(
     "confidence_score",
@@ -94,7 +106,6 @@ def load_mlflow_metrics():
                     model_name = _get(row, "params.model_name") or ""
                     dataset = _get(row, "params.dataset") or ""
                     lmap = {"run_name": run_name, "model_name": model_name}
-
                     if (v := _get(row, "metrics.eval_accuracy")) is not None:
                         TRAIN_EVAL_ACCURACY.labels(
                             run_name=run_name, model_name=model_name, dataset=dataset
@@ -173,13 +184,20 @@ def health():
     return {"status": "ok"}
 
 
+@app.post("/reload-metrics")
+def reload_metrics():
+    load_mlflow_metrics()
+    return {"status": "reloaded"}
+
+
 @app.post("/predict", response_model=PredictResponse)
 def predict(request: PredictRequest):
     start = time.perf_counter()
-    time.sleep(random.uniform(0.002, 0.015))
-    class_idx = random.randint(0, len(CLASS_NAMES) - 1)
-    class_name = CLASS_NAMES[class_idx]
-    confidence = random.betavariate(5, 2)
+    time.sleep(random.uniform(*LATENCY_RANGE))
+    class_name = random.choices(CLASS_NAMES, weights=CLASS_WEIGHTS)[0]
+    class_idx = CLASS_NAMES.index(class_name)
+    alpha, beta_param = CONFIDENCE_PROFILES[class_name]
+    confidence = random.betavariate(alpha, beta_param)
     elapsed = time.perf_counter() - start
     PREDICTIONS_TOTAL.labels(class_name=class_name).inc()
     INFERENCE_LATENCY.observe(elapsed)

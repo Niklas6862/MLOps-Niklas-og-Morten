@@ -47,10 +47,13 @@ services:
     image: python:3.12-slim
     working_dir: /app
     command: >
-      sh -c "pip install --quiet fastapi prometheus-client prometheus-fastapi-instrumentator uvicorn pydantic &&
+      sh -c "pip install --quiet fastapi prometheus-client prometheus-fastapi-instrumentator uvicorn pydantic mlflow pandas &&
              uvicorn monitoring_api:app --host 0.0.0.0 --port 8000"
     volumes:
       - ./monitoring_api.py:/app/monitoring_api.py
+      - ./mlruns:/app/mlruns
+    environment:
+      - MLFLOW_TRACKING_URI=/app/mlruns
     ports:
       - "8000:8000"
 
@@ -67,7 +70,6 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - GF_INSTALL_PLUGINS=frser-sqlite-datasource
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
       - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/mlops.json
