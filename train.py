@@ -5,6 +5,7 @@ import logging
 import os
 from pathlib import Path
 
+import torch
 import mlflow
 import mlflow.transformers
 import yaml
@@ -38,7 +39,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _build_model_card(cfg: dict, metrics: dict, run_id: str) -> dict:
+def _build_model_card(cfg: dict, metrics: dict, run_id: str, test_metrics: dict | None = None) -> dict:
     """Assemble a minimal model card capturing provenance and train metrics."""
     base = cfg.get("project", {})
     model = cfg.get("model", {})
@@ -59,6 +60,7 @@ def _build_model_card(cfg: dict, metrics: dict, run_id: str) -> dict:
             "seed": base.get("seed", 42),
         },
         "train_metrics": {k: v for k, v in metrics.items() if isinstance(v, (int, float))},
+        "test_metrics": {k: v for k, v in (test_metrics or {}).items() if isinstance(v, (int, float))},
     }
 
 
@@ -179,6 +181,19 @@ def main() -> None:
         else:
             logger.warning("Carbon tracking data not available — skipping MLflow carbon metrics.")
 
+        # --- D3.1: inputs for parallelization speedup estimate ---
+        num_gpus = max(torch.cuda.device_count(), 1)
+        mlflow.log_param("num_gpus_used", num_gpus)
+        mlflow.log_metric("single_gpu_train_runtime_s", round(train_result.metrics.get("train_runtime", 0), 1))
+
+        # --- D3.2: inputs for scaling law estimate ---
+        # trainable_params and n_train already logged above; test_loss is the remaining input.
+        test_metrics: dict = {}
+        if "test" in processed_ds:
+            test_metrics = trainer.evaluate(processed_ds["test"], metric_key_prefix="test")
+            logger.info("Test metrics: %s", test_metrics)
+            mlflow.log_metrics({k: v for k, v in test_metrics.items() if isinstance(v, (int, float))})
+
         # --- Save model to disk ---
         logger.info("Saving model to '%s' …", output_dir)
         trainer.save_model(str(output_dir))
@@ -196,7 +211,7 @@ def main() -> None:
         logger.info("Model artifact logged to MLflow.")
 
         # --- Model card ---
-        card = _build_model_card(cfg, train_result.metrics, run.info.run_id)
+        card = _build_model_card(cfg, train_result.metrics, run.info.run_id, test_metrics if "test" in processed_ds else None)
         card_path = output_dir / "model_card.yaml"
         with open(card_path, "w") as fh:
             yaml.dump(card, fh, default_flow_style=False)
