@@ -8,9 +8,6 @@ tags:
   - plant-disease
 datasets:
   - AI-Lab-Makerere/beans
-metrics:
-  - accuracy
-  - f1
 base_model: google/vit-base-patch16-224
 pipeline_tag: image-classification
 ---
