@@ -1,3 +1,20 @@
+---
+language: en
+license: other
+license_name: academic-research-only
+tags:
+  - image-classification
+  - vision-transformer
+  - plant-disease
+datasets:
+  - AI-Lab-Makerere/beans
+metrics:
+  - accuracy
+  - f1
+base_model: google/vit-base-patch16-224
+pipeline_tag: image-classification
+---
+
 # Model Card — Bean Leaf Disease Classifier
 
 ## Model Details
